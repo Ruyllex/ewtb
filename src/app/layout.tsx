@@ -31,6 +31,39 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  
+  // Si Clerk no está configurado, renderizar sin ClerkProvider
+  if (!clerkPublishableKey || clerkPublishableKey.includes("...")) {
+    return (
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.className} antialiased`}>
+          <div className="min-h-screen flex items-center justify-center p-4">
+            <div className="max-w-md w-full bg-card border border-border rounded-lg p-6 space-y-4">
+              <h1 className="text-2xl font-bold">⚠️ Clerk no configurado</h1>
+              <p className="text-muted-foreground">
+                Para usar la autenticación, necesitas configurar las variables de Clerk en tu archivo <code className="bg-muted px-1 rounded">.env.local</code>.
+              </p>
+              <div className="space-y-2 text-sm">
+                <p><strong>Pasos:</strong></p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Ve a <a href="https://dashboard.clerk.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">dashboard.clerk.com</a></li>
+                  <li>Crea una aplicación o selecciona una existente</li>
+                  <li>Copia las claves desde API Keys</li>
+                  <li>Agrégalas a <code className="bg-muted px-1 rounded">.env.local</code></li>
+                  <li>Reinicia el servidor</li>
+                </ol>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Consulta <code className="bg-muted px-1 rounded">GUIA_CREDENCIALES.md</code> para más detalles.
+              </p>
+            </div>
+          </div>
+        </body>
+      </html>
+    );
+  }
+
   return (
     <ClerkProvider afterSignOutUrl={"/"}>
       <html lang="en" suppressHydrationWarning>

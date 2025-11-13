@@ -1,4 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
 const isProtectedRoute = createRouteMatcher(["/studio(.*)"]);
 const isPublicRoute = createRouteMatcher([
@@ -7,7 +8,21 @@ const isPublicRoute = createRouteMatcher([
   "/api/uploadthing",
 ]);
 
+// Verificar si Clerk está configurado
+const isClerkConfigured = () => {
+  const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+  return publishableKey && !publishableKey.includes("...");
+};
+
 export default clerkMiddleware(async (auth, request) => {
+  // Si Clerk no está configurado, permitir acceso a todas las rutas excepto /studio
+  if (!isClerkConfigured()) {
+    if (isProtectedRoute(request)) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
   // Skip authentication for webhook routes
   if (isPublicRoute(request)) return;
 
