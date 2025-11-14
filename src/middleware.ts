@@ -6,6 +6,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/videos/webhook",
   "/api/users/webhook",
   "/api/uploadthing",
+  "/api/webhooks/stripe",
 ]);
 
 // Verificar si Clerk está configurado
