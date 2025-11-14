@@ -3,18 +3,22 @@
 ## 📋 Variables que Necesitas Obtener
 
 ### 1. Mux (3 variables) - OBLIGATORIO
+
 - `MUX_TOKEN_ID`
 - `MUX_TOKEN_SECRET`
 - `MUX_WEBHOOK_SECRET`
 
 ### 2. UploadThing (1 variable) - OBLIGATORIO
+
 - `UPLOADTHING_TOKEN`
 
 ### 3. Upstash Redis (2 variables) - OBLIGATORIO
+
 - `UPSTASH_REDIS_REST_URL`
 - `UPSTASH_REDIS_REST_TOKEN`
 
 ### 4. Mux Live (2 variables) - OPCIONAL (para después)
+
 - `MUX_LIVE_STREAM_KEY`
 - `MUX_LIVE_STREAM_SECRET`
 
@@ -36,6 +40,7 @@
 8. Copia Signing Secret → `MUX_WEBHOOK_SECRET`
 
 **Agrega a .env.local:**
+
 ```env
 MUX_TOKEN_ID=tu_token_id
 MUX_TOKEN_SECRET=tu_token_secret
@@ -52,6 +57,7 @@ MUX_WEBHOOK_SECRET=tu_webhook_secret
 4. Copia tu Token → `UPLOADTHING_TOKEN`
 
 **Agrega a .env.local:**
+
 ```env
 UPLOADTHING_TOKEN=sk_live_... o sk_test_...
 ```
@@ -74,6 +80,7 @@ UPLOADTHING_TOKEN=sk_live_... o sk_test_...
    - REST Token → `UPSTASH_REDIS_REST_TOKEN`
 
 **Agrega a .env.local:**
+
 ```env
 UPSTASH_REDIS_REST_URL=https://...upstash.io
 UPSTASH_REDIS_REST_TOKEN=tu_token
@@ -84,6 +91,7 @@ UPSTASH_REDIS_REST_TOKEN=tu_token
 ## ✅ Después de Agregar las Variables
 
 1. **Reinicia el servidor:**
+
    ```bash
    # Detén (Ctrl+C) y reinicia
    npm run dev
@@ -114,4 +122,3 @@ UPSTASH_REDIS_REST_TOKEN=tu_token
 ---
 
 ¿Tienes las credenciales listas? Cuando las tengas, dímelo y las agrego al archivo.
-
