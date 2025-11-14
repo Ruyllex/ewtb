@@ -2,6 +2,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthButton } from "@/modules/auth/ui/components/auth-button";
 import Image from "next/image";
 import Link from "next/link";
+import { Suspense } from "react";
 import { SearchInput } from "./search-input";
 
 export const HomeNavbar = () => {
@@ -22,7 +23,9 @@ export const HomeNavbar = () => {
 
         {/* Search bar */}
         <div className="flex-1 flex justify-center max-w-[720px] mx-auto">
-          <SearchInput />
+          <Suspense fallback={<div className="w-full max-w-[600px] h-10" />}>
+            <SearchInput />
+          </Suspense>
         </div>
 
         <div className="shrink-0 items-center flex gap-4 ">

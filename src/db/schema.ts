@@ -69,7 +69,7 @@ export const videoInsertSchema = createInsertSchema(videos);
 export const videoUpdateSchema = createUpdateSchema(videos);
 export const videoSelectSchema = createSelectSchema(videos);
 
-export const videoRelations = relations(videos, ({ one }) => ({
+export const videoRelations = relations(videos, ({ one, many }) => ({
   user: one(users, {
     fields: [videos.userId],
     references: [users.id],
@@ -77,5 +77,26 @@ export const videoRelations = relations(videos, ({ one }) => ({
   category: one(categories, {
     fields: [videos.categoryId],
     references: [categories.id],
+  }),
+  views: many(views),
+}));
+
+export const views = pgTable("views", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  videoId: uuid("video_id")
+    .references(() => videos.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const viewRelations = relations(views, ({ one }) => ({
+  video: one(videos, {
+    fields: [views.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [views.userId],
+    references: [users.id],
   }),
 }));

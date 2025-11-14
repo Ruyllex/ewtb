@@ -14,20 +14,20 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 
 ### Breakdown por Componente
 
-| Componente | % | Estado | Acción |
-|-----------|---|--------|--------|
-| Arquitectura | 100% | ✅ Listo | Ninguna |
-| Frontend/UI | 90% | ✅ Listo | Detalles menores |
-| Autenticación | 100% | ✅ Funcionando | Ninguna |
-| Base de Datos | 90% | ✅ Funcionando | Agregar más tablas |
-| API (tRPC) | 85% | ✅ Funcionando | Algunos endpoints |
-| **Configuración** | **50%** | 🟡 BLOQUEADOR | **HOY: 1 hora** |
-| Pagos (Stripe) | 100% | ✅ Listo | Ninguna |
-| Página Video Individual | 0% | ❌ No existe | **MAÑANA: 2h** |
-| Búsqueda | 20% | 🟡 UI only | **MAÑANA: 1.5h** |
-| Comentarios | 0% | ❌ No existe | **Próxima semana: 1.5h** |
-| Streaming en Vivo | 0% | ❌ No existe | **Próxima semana: 3h** |
-| Deploy/Monitoreo | 0% | ❌ No existe | **Final: 2.5h** |
+| Componente              | %       | Estado         | Acción                   |
+| ----------------------- | ------- | -------------- | ------------------------ |
+| Arquitectura            | 100%    | ✅ Listo       | Ninguna                  |
+| Frontend/UI             | 90%     | ✅ Listo       | Detalles menores         |
+| Autenticación           | 100%    | ✅ Funcionando | Ninguna                  |
+| Base de Datos           | 90%     | ✅ Funcionando | Agregar más tablas       |
+| API (tRPC)              | 85%     | ✅ Funcionando | Algunos endpoints        |
+| **Configuración**       | **50%** | 🟡 BLOQUEADOR  | **HOY: 1 hora**          |
+| Pagos (Stripe)          | 100%    | ✅ Listo       | Ninguna                  |
+| Página Video Individual | 0%      | ❌ No existe   | **MAÑANA: 2h**           |
+| Búsqueda                | 20%     | 🟡 UI only     | **MAÑANA: 1.5h**         |
+| Comentarios             | 0%      | ❌ No existe   | **Próxima semana: 1.5h** |
+| Streaming en Vivo       | 0%      | ❌ No existe   | **Próxima semana: 3h**   |
+| Deploy/Monitoreo        | 0%      | ❌ No existe   | **Final: 2.5h**          |
 
 ---
 
@@ -46,14 +46,16 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 ❌ UPSTASH_REDIS_REST_TOKEN    - Para caching
 ```
 
-**Impacto:** 
+**Impacto:**
+
 - Errores en la consola
 - No se pueden subir videos
 - No funciona el rate limiting
 - No se puede cachear datos
 
-**Solución:** 
-- Seguir `PLAN_ACCION_HOY.md` 
+**Solución:**
+
+- Seguir `PLAN_ACCION_HOY.md`
 - Tiempo: 1 hora
 
 ---
@@ -64,7 +66,8 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 
 **Impacto:** Los videos no se actualizan cuando Mux termina de procesarlos
 
-**Solución:** 
+**Solución:**
+
 - Agregar URL a Mux Dashboard
 - Tiempo: 15 minutos
 
@@ -73,6 +76,7 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 ## ✅ LO QUE YA ESTÁ LISTO
 
 ### Completamente Funcional
+
 - ✅ **Estructura modular** del proyecto
 - ✅ **Frontend completo** con UI moderna (Tailwind CSS 4 + Radix UI)
 - ✅ **Autenticación** con Clerk (totalmente integrada)
@@ -91,22 +95,26 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 ## ❌ LO QUE FALTA
 
 ### Crítico (Bloquea funcionalidad principal)
+
 - ❌ **Página de Video Individual** - No se pueden ver videos completos
 - ❌ **Búsqueda** - No se pueden buscar videos
 - ❌ **Variables de Entorno** - Bloquea todo lo de Mux/Redis
 
 ### Importante (Features core)
+
 - ❌ **Sistema de Comentarios** - Interacción básica
 - ❌ **Perfiles de Usuario** - Ver canales
 - ❌ **Suscripciones** - Seguir creadores
 
 ### Medio (Features avanzadas)
+
 - ❌ **Streaming en Vivo** - Funcionalidad nueva
 - ❌ **Historial de visualización**
 - ❌ **Playlists**
 - ❌ **Likes/Dislikes**
 
 ### Bajo (Producción)
+
 - ❌ **Monitoreo** (Sentry/Logtail)
 - ❌ **Deploy en Vercel**
 - ❌ **Testing** (Vitest/Cypress)
@@ -118,24 +126,28 @@ El proyecto **NewTube** tiene una **base sólida y funcional**. La mayoría de l
 He creado **4 documentos nuevos** para guiarte:
 
 ### 1. **PLAN_ACCION_HOY.md** ⭐ EMPIEZA AQUÍ
+
 - ✅ Pasos claros y específicos para hoy
 - ✅ Cómo completar configuración (1 hora)
 - ✅ Cómo verificar que funciona
 - ✅ Troubleshooting para problemas comunes
 
 ### 2. **ANALISIS_ESTADO_ACTUAL.md**
+
 - ✅ Análisis detallado de cada componente
 - ✅ Estadísticas del proyecto
 - ✅ Mapa completo de desarrollo (5 fases)
 - ✅ Plan de 10-15 horas para app completa
 
 ### 3. **MAPA_VISUAL_PROYECTO.md**
+
 - ✅ Diagramas visuales del estado
 - ✅ Flujo de desarrollo recomendado
 - ✅ Dónde estamos en el mapa
 - ✅ Próximos hitos
 
 ### 4. **TAREAS_PENDIENTES.md (ACTUALIZADO)**
+
 - ✅ Estado actual de cada tarea
 - ✅ Tiempo estimado para cada una
 - ✅ Prioridad clara
@@ -146,14 +158,17 @@ He creado **4 documentos nuevos** para guiarte:
 ## 🗺️ PLAN PASO A PASO (15 HORAS TOTAL)
 
 ### Fase 1: HOY (1-2 horas) 🔴 CRÍTICO
+
 **Objetivo:** Desbloquear el desarrollo
 
 1. **Completar variables de entorno** (1 hora)
+
    - Obtener credenciales de Mux, UploadThing, Redis
    - Agregar a `.env.local`
    - Reiniciar servidor
 
 2. **Configurar webhooks en Mux Dashboard** (15 min)
+
    - Registrar URL de webhook
    - Guardar signing secret
 
@@ -167,9 +182,11 @@ He creado **4 documentos nuevos** para guiarte:
 ---
 
 ### Fase 2: MAÑANA (2-3 horas) 🟠 IMPORTANTE
+
 **Objetivo:** Features principales funcionando
 
 1. **Página de Video Individual** (2 horas)
+
    - Ruta `/video/[videoId]`
    - Reproductor de Mux
    - Información del video
@@ -184,6 +201,7 @@ He creado **4 documentos nuevos** para guiarte:
 ---
 
 ### Fase 3: PRÓXIMOS 3-4 DÍAS (3-4 horas) 🟡 MEDIA
+
 **Objetivo:** Features sociales
 
 1. **Comentarios** (1.5 horas)
@@ -195,6 +213,7 @@ He creado **4 documentos nuevos** para guiarte:
 ---
 
 ### Fase 4: FINAL DE LA SEMANA (2-3 horas) 🟢 BAJA
+
 **Objetivo:** Preparar producción
 
 1. **Monitoreo (Sentry)** (1 hora)
@@ -205,6 +224,7 @@ He creado **4 documentos nuevos** para guiarte:
 ---
 
 ### Fase 5: OPCIONAL (2-3 horas)
+
 **Objetivo:** Features avanzadas
 
 1. **Streaming en Vivo** (3 horas)
@@ -238,7 +258,8 @@ Documentos de Guía:     11 (originales + 4 nuevos)
 
 **Tiempo total:** 1 hora
 
-**Salida esperada:** 
+**Salida esperada:**
+
 - ✅ Configuración completada
 - ✅ App sin errores
 - ✅ Lista para features nuevas
@@ -250,17 +271,20 @@ Documentos de Guía:     11 (originales + 4 nuevos)
 He organizando los documentos en 3 categorías:
 
 **PARA ENTENDER:**
+
 - `ANALISIS_ESTADO_ACTUAL.md` - Estado detallado
 - `ANALISIS_ESTRUCTURA.md` - Cómo está hecho
 - `MAPA_VISUAL_PROYECTO.md` - Visualización
 
 **PARA HACER (HOY):**
+
 - `PLAN_ACCION_HOY.md` ⭐ **EMPIEZA AQUÍ**
 - `TAREA_1_COMPLETAR_ENV.md`
 - `GUIA_RAPIDA_TAREA_1.md`
 - `GUIA_CREDENCIALES.md`
 
 **PARA DESPUÉS:**
+
 - `TAREA_2_SENTRY.md` - Monitoreo
 - `TAREA_3_VERCEL.md` - Deploy
 - `TAREA_4_MUX_LIVE.md` - Streaming
@@ -294,18 +318,17 @@ He organizando los documentos en 3 categorías:
 
 ## 📞 RESUMEN RÁPIDO
 
-| Pregunta | Respuesta |
-|----------|-----------|
-| **¿Qué porcentaje completado?** | 70% |
-| **¿Qué me bloquea hoy?** | Variables de entorno |
-| **¿Cuánto tiempo para desbloquearme?** | 1 hora |
-| **¿Qué sigue después?** | Página de video + búsqueda |
-| **¿Cuánto tiempo para funcional?** | 10-15 horas total |
-| **¿Dónde empiezo?** | PLAN_ACCION_HOY.md |
-| **¿Hay guías?** | Sí, 11 documentos |
-| **¿Está bien organizado el código?** | Sí, modular y escalable |
+| Pregunta                               | Respuesta                  |
+| -------------------------------------- | -------------------------- |
+| **¿Qué porcentaje completado?**        | 70%                        |
+| **¿Qué me bloquea hoy?**               | Variables de entorno       |
+| **¿Cuánto tiempo para desbloquearme?** | 1 hora                     |
+| **¿Qué sigue después?**                | Página de video + búsqueda |
+| **¿Cuánto tiempo para funcional?**     | 10-15 horas total          |
+| **¿Dónde empiezo?**                    | PLAN_ACCION_HOY.md         |
+| **¿Hay guías?**                        | Sí, 11 documentos          |
+| **¿Está bien organizado el código?**   | Sí, modular y escalable    |
 
 ---
 
 **🎯 Siguiente: Lee PLAN_ACCION_HOY.md y comienza PRIORIDAD 1**
-

@@ -1,16 +1,46 @@
-import { SearchIcon } from "lucide-react";
+"use client";
+
+import { SearchIcon, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, FormEvent } from "react";
 
 export const SearchInput = () => {
-  // TODO: add search functionality
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (query.trim()) {
+      router.push(`/search?q=${encodeURIComponent(query.trim())}`);
+    }
+  };
+
+  const handleClear = () => {
+    setQuery("");
+    router.push("/search");
+  };
+
   return (
-    <form className="flex w-full max-w-[600px]">
+    <form onSubmit={handleSubmit} className="flex w-full max-w-[600px]">
       <div className="relative w-full">
         <input
           type="text"
           placeholder="Search"
-          className="w-full pl-4 py-2 pr-12 rounded-l-full border focus:outline-hidden focus:border-blue-500 "
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          className="w-full pl-4 py-2 pr-12 rounded-l-full border focus:outline-hidden focus:border-blue-500"
         />
-        {/* TODO: add remove search button */}
+        {query && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Clear search"
+          >
+            <X className="size-4" />
+          </button>
+        )}
       </div>
       <button
         type="submit"

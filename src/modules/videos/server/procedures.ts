@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { videos, videoUpdateSchema } from "@/db/schema";
+import { videos, videoUpdateSchema, views, users } from "@/db/schema";
 import { mux } from "@/lib/mux";
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, ilike, sql, desc } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import z from "zod";
 
@@ -148,4 +148,142 @@ export const videosRouter = createTRPCRouter({
       });
     }
   }),
+
+  // Public procedures
+  getPublic: baseProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const [video] = await db
+        .select({
+          id: videos.id,
+          title: videos.title,
+          description: videos.description,
+          thumbnailUrl: videos.thumbnailUrl,
+          muxPlaybackId: videos.muxPlaybackId,
+          duration: videos.duration,
+          visibility: videos.visibility,
+          createdAt: videos.createdAt,
+          updatedAt: videos.updatedAt,
+          userId: videos.userId,
+          categoryId: videos.categoryId,
+          userName: users.name,
+          userImageUrl: users.imageUrl,
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id))
+        .where(and(eq(videos.id, input.id), eq(videos.visibility, "public")))
+        .limit(1);
+
+      if (!video) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
+      }
+
+      // Get view count
+      const viewCountResult = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(views)
+        .where(eq(views.videoId, input.id));
+
+      const viewCount = viewCountResult[0]?.count ?? 0;
+
+      return {
+        ...video,
+        viewCount,
+      };
+    }),
+
+  search: baseProcedure
+    .input(
+      z.object({
+        query: z.string().min(1).max(100),
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { query, limit, cursor } = input;
+
+      const searchCondition = ilike(videos.title, `%${query}%`);
+
+      const whereConditions = [
+        eq(videos.visibility, "public"),
+        searchCondition,
+        cursor
+          ? sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: videos.id,
+          title: videos.title,
+          description: videos.description,
+          thumbnailUrl: videos.thumbnailUrl,
+          muxPlaybackId: videos.muxPlaybackId,
+          duration: videos.duration,
+          createdAt: videos.createdAt,
+          userId: videos.userId,
+          userName: users.name,
+          userImageUrl: users.imageUrl,
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(videos.createdAt), desc(videos.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  recordView: baseProcedure
+    .input(z.object({ videoId: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      // Get user ID if authenticated
+      let userId: string | null = null;
+      if (ctx.clerkUserId) {
+        const [user] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.clerkId, ctx.clerkUserId))
+          .limit(1);
+        userId = user?.id || null;
+      }
+
+      // Check if view already exists (prevent duplicate views from same user)
+      if (userId) {
+        const existingView = await db
+          .select()
+          .from(views)
+          .where(and(eq(views.videoId, input.videoId), eq(views.userId, userId)))
+          .limit(1);
+
+        if (existingView.length > 0) {
+          return { success: true, alreadyViewed: true };
+        }
+      }
+
+      // Record the view
+      await db.insert(views).values({
+        videoId: input.videoId,
+        userId: userId || null,
+      });
+
+      return { success: true, alreadyViewed: false };
+    }),
 });
