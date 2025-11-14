@@ -11,6 +11,7 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 ### 1. `/src/app/` - Rutas de Next.js (App Router)
 
 #### **`(auth)/`** - Rutas de Autenticación
+
 - **`sign-in/[[...sign-in]]/page.tsx`**: Página de inicio de sesión (Clerk)
 - **`sign-up/[[...sign-up]]/page.tsx`**: Página de registro (Clerk)
 - **`layout.tsx`**: Layout para páginas de autenticación
@@ -20,12 +21,14 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 ---
 
 #### **`(home)/`** - Página Principal
+
 - **`page.tsx`**: Página principal que muestra videos
 - **`client.tsx`**: Componente cliente para interactividad
 - **`layout.tsx`**: Layout con navbar y sidebar
 
 **✅ Estado**: Implementado (básico)
 **🛠️ Pendiente**:
+
 - Sistema de búsqueda funcional (actualmente solo UI)
 - Página de detalle de video individual
 - Sistema de recomendaciones
@@ -33,12 +36,14 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 ---
 
 #### **`(studio)/`** - Área de Estudio (Dashboard de Creadores)
+
 - **`studio/page.tsx`**: Lista de videos del usuario
 - **`studio/videos/[videoId]/page.tsx`**: Editor de video individual
 - **`layout.tsx`**: Layout con navbar y sidebar del estudio
 
 **✅ Estado**: Implementado (básico)
 **🛠️ Pendiente**:
+
 - Analíticas de videos (vistas, engagement)
 - Configuración avanzada de video
 - Gestión de playlists
@@ -48,20 +53,24 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 #### **`api/`** - Endpoints de API
 
 ##### **`trpc/[trpc]/route.ts`**
+
 - Handler principal de tRPC
 - **✅ Estado**: Implementado
 
 ##### **`uploadthing/`**
+
 - **`core.ts`**: Configuración de UploadThing para thumbnails
 - **`route.ts`**: Handler de rutas de UploadThing
 - **✅ Estado**: Implementado
 
 ##### **`users/webhook/route.ts`**
+
 - Webhook de Clerk para sincronizar usuarios
 - Maneja: `user.created`, `user.updated`, `user.deleted`
 - **✅ Estado**: Implementado
 
 ##### **`videos/webhook/route.ts`**
+
 - Webhook de Mux para actualizar estado de videos
 - Maneja: `video.asset.created`, `video.asset.ready`, `video.asset.errored`, `video.asset.deleted`, `video.asset.track.ready`
 - **✅ Estado**: Implementado
@@ -71,10 +80,12 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 ### 2. `/src/components/` - Componentes UI Reutilizables
 
 #### **`ui/`** - Componentes de Radix UI + shadcn/ui
+
 - Componentes base: `button`, `card`, `dialog`, `input`, `select`, etc.
 - **✅ Estado**: Implementado (biblioteca completa)
 
 #### **Componentes Específicos**:
+
 - **`filter-carousel.tsx`**: Carrusel de filtros/categorías
 - **`infinite-scroll.tsx`**: Scroll infinito para paginación
 - **`responsive-dialog.tsx`**: Diálogo responsivo
@@ -90,10 +101,12 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 **Tablas implementadas**:
 
 1. **`users`**
+
    - Campos: `id`, `clerkId`, `name`, `imageUrl`, `createdAt`, `updatedAt`
    - **🛠️ Pendiente**: Campo `banner` (mencionado en TODO)
 
 2. **`categories`**
+
    - Campos: `id`, `name`, `description`, `createdAt`, `updatedAt`
    - **✅ Estado**: Implementado
 
@@ -102,6 +115,7 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
    - **✅ Estado**: Implementado
 
 **🛠️ Tablas pendientes** (según README):
+
 - `comments` - Sistema de comentarios
 - `playlists` - Playlists de usuarios
 - `subscriptions` - Suscripciones a canales
@@ -111,6 +125,7 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 - `analytics` - Analíticas de videos
 
 #### **`index.ts`** - Configuración de Drizzle
+
 - **✅ Estado**: Implementado
 
 ---
@@ -120,6 +135,7 @@ Este proyecto sigue una **arquitectura modular** basada en features, donde cada 
 Esta es la **arquitectura modular** del proyecto. Cada módulo contiene su lógica de servidor (tRPC) y UI.
 
 #### **`auth/`** - Autenticación
+
 ```
 auth/
   ui/
@@ -129,12 +145,14 @@ auth/
 
 **✅ Estado**: Implementado (básico)
 **🛠️ Pendiente**:
+
 - Menú de perfil de usuario (mencionado en TODO)
 - Diferentes estados de autenticación (mencionado en TODO)
 
 ---
 
 #### **`categories/`** - Categorías
+
 ```
 categories/
   server/
@@ -142,6 +160,7 @@ categories/
 ```
 
 **Endpoints tRPC**:
+
 - `categories.getMany` - Obtener todas las categorías
 
 **✅ Estado**: Implementado
@@ -149,6 +168,7 @@ categories/
 ---
 
 #### **`home/`** - Página Principal
+
 ```
 home/
   ui/
@@ -170,6 +190,7 @@ home/
 
 **✅ Estado**: Implementado (UI completa)
 **🛠️ Pendiente**:
+
 - Funcionalidad de búsqueda (actualmente solo UI)
 - Detección de ruta activa en sidebar (mencionado en TODO)
 - Página de video individual
@@ -178,6 +199,7 @@ home/
 ---
 
 #### **`studio/`** - Área de Estudio
+
 ```
 studio/
   server/
@@ -203,11 +225,13 @@ studio/
 ```
 
 **Endpoints tRPC**:
+
 - `studio.getOne` - Obtener un video por ID
 - `studio.getMany` - Obtener videos del usuario (paginación infinita)
 
 **✅ Estado**: Implementado (básico)
 **🛠️ Pendiente**:
+
 - Analíticas de videos
 - Configuración avanzada
 - Gestión de playlists
@@ -216,6 +240,7 @@ studio/
 ---
 
 #### **`videos/`** - Gestión de Videos
+
 ```
 videos/
   constants.ts           # Constantes relacionadas con videos
@@ -228,6 +253,7 @@ videos/
 ```
 
 **Endpoints tRPC**:
+
 - `videos.create` - Crear nuevo video (inicia upload en Mux)
 - `videos.update` - Actualizar video (título, descripción, categoría, visibilidad)
 - `videos.remove` - Eliminar video
@@ -235,6 +261,7 @@ videos/
 
 **✅ Estado**: Implementado
 **🛠️ Pendiente**:
+
 - Endpoint para obtener videos públicos (para página principal)
 - Endpoint para obtener video individual (para página de detalle)
 - Sistema de likes/dislikes
@@ -246,23 +273,28 @@ videos/
 ### 5. `/src/trpc/` - Configuración de tRPC
 
 #### **`routers/_app.ts`**
+
 - Router principal que combina todos los routers
 - **✅ Estado**: Implementado
 
 #### **`init.ts`**
+
 - Configuración de tRPC (context, middleware)
 - **✅ Estado**: Implementado
 - **🛠️ Pendiente**: Generar problema para build (mencionado en TODO)
 
 #### **`server.tsx`**
+
 - Helpers para usar tRPC en servidor
 - **✅ Estado**: Implementado
 
 #### **`client.tsx`**
+
 - Configuración de cliente tRPC
 - **✅ Estado**: Implementado
 
 #### **`query-client.ts`**
+
 - Configuración de React Query
 - **✅ Estado**: Implementado
 
@@ -317,11 +349,13 @@ videos/
 ### 🔴 Alta Prioridad
 
 1. **Sistema de Búsqueda**
+
    - Implementar lógica de búsqueda en `home-navbar/search-input.tsx`
    - Crear endpoint tRPC `videos.search`
    - Agregar índice de búsqueda en base de datos
 
 2. **Página de Video Individual**
+
    - Crear ruta `/video/[videoId]`
    - Componente de reproductor completo
    - Información del video (título, descripción, autor, fecha)
@@ -337,18 +371,21 @@ videos/
 ### 🟡 Media Prioridad
 
 4. **Sistema de Comentarios**
+
    - Crear tabla `comments` en schema
    - Endpoints tRPC para crear/obtener comentarios
    - UI de comentarios en página de video
    - Sistema de respuestas (comentarios anidados)
 
 5. **Playlists**
+
    - Crear tabla `playlists` y `playlist_videos`
    - Endpoints tRPC para gestionar playlists
    - UI para crear/editar playlists
    - Agregar videos a playlists
 
 6. **Suscripciones**
+
    - Crear tabla `subscriptions`
    - Endpoints tRPC para suscribirse/desuscribirse
    - UI de botón de suscripción
@@ -362,6 +399,7 @@ videos/
 ### 🟢 Baja Prioridad
 
 8. **Recomendaciones Inteligentes**
+
    - Algoritmo de recomendaciones basado en:
      - Videos vistos
      - Categorías preferidas
@@ -369,23 +407,27 @@ videos/
    - Endpoint tRPC `videos.recommendations`
 
 9. **Historial de Visualización**
+
    - Crear tabla `watch_history`
    - Guardar videos vistos
    - Endpoint para obtener historial
    - UI de historial
 
 10. **Analíticas para Creadores**
+
     - Crear tabla `analytics` o `video_stats`
     - Tracking de vistas, likes, comentarios
     - Dashboard de analíticas en `/studio/analytics`
     - Gráficos y métricas
 
 11. **Testing**
+
     - Configurar Vitest
     - Tests unitarios
     - Tests E2E con Cypress
 
 12. **Mejoras de Accesibilidad**
+
     - Auditar con herramientas WCAG
     - Mejorar ARIA labels
     - Navegación por teclado
@@ -401,13 +443,13 @@ videos/
 ## 📝 TODOs Encontrados en el Código
 
 1. **`src/db/schema.ts`**: Agregar campo `banner` a tabla `users`
-2. **`src/modules/auth/ui/components/auth-button.tsx`**: 
+2. **`src/modules/auth/ui/components/auth-button.tsx`**:
    - Agregar diferentes estados de autenticación
    - Agregar menú de perfil de usuario
 3. **`src/modules/videos/server/procedures.ts`**: Restringir `cors_origin` en producción
 4. **`src/modules/home/ui/components/home-sidebar/main-section.tsx`**: Detectar ruta activa
 5. **`src/modules/home/ui/components/home-sidebar/personal-section.tsx`**: Detectar ruta activa
-6. **`src/modules/home/ui/components/home-navbar/search-input.tsx`**: 
+6. **`src/modules/home/ui/components/home-navbar/search-input.tsx`**:
    - Implementar funcionalidad de búsqueda
    - Agregar botón para remover búsqueda
 7. **`src/modules/studio/ui/sections/form-section.tsx`**: Agregar sección de thumbnail
@@ -418,21 +460,25 @@ videos/
 ## 🎯 Plan de Implementación Sugerido
 
 ### Fase 1: Funcionalidades Básicas
+
 1. ✅ Sistema de búsqueda
 2. ✅ Página de video individual
 3. ✅ Sistema de likes/dislikes básico
 
 ### Fase 2: Interacción Social
+
 4. ✅ Sistema de comentarios
 5. ✅ Perfiles y canales de usuario
 6. ✅ Suscripciones
 
 ### Fase 3: Funcionalidades Avanzadas
+
 7. ✅ Playlists
 8. ✅ Historial de visualización
 9. ✅ Recomendaciones
 
 ### Fase 4: Analíticas y Optimización
+
 10. ✅ Analíticas para creadores
 11. ✅ Testing
 12. ✅ Optimización de performance
@@ -450,4 +496,3 @@ videos/
 ---
 
 **Última actualización**: Basado en análisis del código actual del repositorio
-
