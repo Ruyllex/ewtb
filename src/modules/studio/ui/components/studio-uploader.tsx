@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import MuxUploader, {
   MuxUploaderDrop,
@@ -6,20 +8,41 @@ import MuxUploader, {
   MuxUploaderStatus,
 } from "@mux/mux-uploader-react";
 import { UploadIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 interface StudioUploaderProps {
   endpoint?: string | null;
-  onSuccess: VoidFunction;
+  uploadId: string;
+  onUploadComplete: (uploadId: string) => void;
 }
 
 const UPLOADER_ID = "video-uploader";
 
-export const StudioUploader = ({ endpoint, onSuccess }: StudioUploaderProps) => {
+export const StudioUploader = ({ endpoint, uploadId, onUploadComplete }: StudioUploaderProps) => {
+  const uploaderRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!uploaderRef.current) return;
+
+    const uploader = uploaderRef.current.querySelector(`#${UPLOADER_ID}`) as any;
+    if (!uploader) return;
+
+    const handleSuccess = () => {
+      // Cuando el upload termine, llamar al callback con el uploadId
+      onUploadComplete(uploadId);
+    };
+
+    uploader.addEventListener("success", handleSuccess);
+
+    return () => {
+      uploader.removeEventListener("success", handleSuccess);
+    };
+  }, [uploadId, onUploadComplete]);
+
   return (
-    <div>
+    <div ref={uploaderRef}>
       <MuxUploader
-        endpoint={endpoint}
-        onSuccess={onSuccess}
+        endpoint={endpoint || undefined}
         id={UPLOADER_ID}
         className="hidden group/uploader"
       />
@@ -32,12 +55,12 @@ export const StudioUploader = ({ endpoint, onSuccess }: StudioUploaderProps) => 
           <div className="flex flex-col gap-2 text-center">
             <p className="text-sm ">Drag and drop video files to upload</p>
             <p className="text-xs text-muted-foreground">
-              Your videos will be private until you publish them
+              Tu video será privado hasta que lo publiques
             </p>
           </div>
           <MuxUploaderFileSelect muxUploader={UPLOADER_ID}>
             <Button className="rounded-full" type="button">
-              Select files
+              Seleccionar archivo
             </Button>
           </MuxUploaderFileSelect>
         </div>

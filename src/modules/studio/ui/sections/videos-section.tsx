@@ -17,7 +17,15 @@ import { Suspense, useEffect } from "react";
 export const VideosSection = () => {
   return (
     <Suspense fallback={<VideoSectionSkeleton />}>
-      <ErrorBoundary fallback={<p>Error...</p>}>
+      <ErrorBoundary
+        fallback={
+          <div className="border-y p-8 text-center">
+            <p className="text-muted-foreground">
+              Error al cargar los videos. Por favor, recarga la página.
+            </p>
+          </div>
+        }
+      >
         <VideosSectionSuspense />
       </ErrorBoundary>
     </Suspense>

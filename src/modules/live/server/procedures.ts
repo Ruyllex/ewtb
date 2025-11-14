@@ -1,0 +1,208 @@
+import { db } from "@/db";
+import { liveStreams } from "@/db/schema";
+import { mux } from "@/lib/mux";
+import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { TRPCError } from "@trpc/server";
+import { and, eq, desc, sql } from "drizzle-orm";
+import z from "zod";
+
+const ensureMuxCredentials = () => {
+  if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Missing Mux credentials. Set MUX_TOKEN_ID and MUX_TOKEN_SECRET.",
+    });
+  }
+};
+
+export const liveRouter = createTRPCRouter({
+  create: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1).max(100),
+        description: z.string().max(5000).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      try {
+        ensureMuxCredentials();
+
+        // Crear live stream en Mux
+        const liveStream = await mux.video.liveStreams.create({
+          playback_policy: ["public"],
+          new_asset_settings: {
+            playback_policy: ["public"],
+          },
+        });
+
+        if (!liveStream.stream_key || !liveStream.playback_ids?.[0]?.id) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Failed to create live stream. Missing stream key or playback ID.",
+          });
+        }
+
+        // Guardar en BD
+        const [savedStream] = await db
+          .insert(liveStreams)
+          .values({
+            userId,
+            title: input.title,
+            description: input.description || null,
+            streamKey: liveStream.stream_key,
+            playbackId: liveStream.playback_ids[0].id,
+            muxLiveStreamId: liveStream.id,
+            status: "idle",
+          })
+          .returning();
+
+        return savedStream;
+      } catch (error) {
+        console.error("Failed to create live stream", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to create live stream. Check your Mux credentials.",
+        });
+      }
+    }),
+
+  getMany: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+      const { limit, cursor } = input;
+
+      const whereConditions = [
+        eq(liveStreams.userId, userId),
+        cursor
+          ? sql`(${liveStreams.createdAt} < ${cursor.createdAt} OR (${liveStreams.createdAt} = ${cursor.createdAt} AND ${liveStreams.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select()
+        .from(liveStreams)
+        .where(and(...whereConditions))
+        .orderBy(desc(liveStreams.createdAt), desc(liveStreams.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  getOne: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      const [stream] = await db
+        .select()
+        .from(liveStreams)
+        .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
+        .limit(1);
+
+      if (!stream) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
+      }
+
+      return stream;
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Obtener el stream primero
+      const [stream] = await db
+        .select()
+        .from(liveStreams)
+        .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
+        .limit(1);
+
+      if (!stream) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
+      }
+
+      // Eliminar de Mux si existe
+      if (stream.muxLiveStreamId) {
+        try {
+          ensureMuxCredentials();
+          await mux.video.liveStreams.delete(stream.muxLiveStreamId);
+        } catch (error) {
+          console.error("Failed to delete live stream from Mux", error);
+          // Continuar con la eliminación en BD aunque falle en Mux
+        }
+      }
+
+      // Eliminar de BD
+      await db.delete(liveStreams).where(eq(liveStreams.id, input.id));
+
+      return { success: true };
+    }),
+
+  getStatus: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      const [stream] = await db
+        .select()
+        .from(liveStreams)
+        .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
+        .limit(1);
+
+      if (!stream || !stream.muxLiveStreamId) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
+      }
+
+      try {
+        ensureMuxCredentials();
+        const muxStream = await mux.video.liveStreams.retrieve(stream.muxLiveStreamId);
+
+        // Actualizar estado en BD
+        await db
+          .update(liveStreams)
+          .set({
+            status: muxStream.status || "idle",
+            updatedAt: new Date(),
+          })
+          .where(eq(liveStreams.id, input.id));
+
+        return {
+          status: muxStream.status || "idle",
+          streamKey: stream.streamKey,
+          playbackId: stream.playbackId,
+        };
+      } catch (error) {
+        console.error("Failed to get live stream status", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to get live stream status",
+        });
+      }
+    }),
+});
+

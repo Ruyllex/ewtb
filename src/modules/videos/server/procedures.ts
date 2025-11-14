@@ -126,18 +126,9 @@ export const videosRouter = createTRPCRouter({
         cors_origin: "*", // TODO: In production this should be restricted to the domain of the app
       });
 
-      const [video] = await db
-        .insert(videos)
-        .values({
-          userId,
-          title: "Untitled",
-          muxStatus: "waiting",
-          muxUploadId: upload.id,
-        })
-        .returning();
-
+      // NO crear el video en BD todavía, solo retornar el upload info
       return {
-        video,
+        uploadId: upload.id,
         url: upload.url,
       };
     } catch (error) {
@@ -149,7 +140,187 @@ export const videosRouter = createTRPCRouter({
     }
   }),
 
+  finalize: protectedProcedure
+    .input(
+      z.object({
+        uploadId: z.string(),
+        title: z.string().min(1).max(100),
+        description: z.string().max(5000).optional(),
+        categoryId: z.string().uuid().optional(),
+        visibility: z.enum(["public", "private"]).default("private"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Verificar que el upload existe y obtener el asset
+      try {
+        const upload = await mux.video.uploads.retrieve(input.uploadId);
+        
+        if (!upload.asset_id) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video is still processing. Please wait until the upload is complete.",
+          });
+        }
+
+        // Obtener el asset para verificar que está listo
+        const asset = await mux.video.assets.retrieve(upload.asset_id);
+        const playbackId = asset.playback_ids?.[0]?.id;
+
+        if (!playbackId) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video is not ready yet. Please wait a moment and try again.",
+          });
+        }
+
+        // Verificar que no existe ya un video con este uploadId
+        const existingVideo = await db
+          .select()
+          .from(videos)
+          .where(eq(videos.muxUploadId, input.uploadId))
+          .limit(1);
+
+        if (existingVideo.length > 0) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Video already exists",
+          });
+        }
+
+        // Crear el video en la BD con los datos del formulario
+        const duration = asset.duration ? Math.round(asset.duration * 1000) : 0;
+        const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.png`;
+        const previewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
+
+        const [video] = await db
+          .insert(videos)
+          .values({
+            userId,
+            title: input.title,
+            description: input.description || null,
+            categoryId: input.categoryId || null,
+            visibility: input.visibility,
+            muxUploadId: input.uploadId,
+            muxAssetId: asset.id,
+            muxPlaybackId: playbackId,
+            muxStatus: asset.status,
+            thumbnailUrl,
+            previewUrl,
+            duration,
+          })
+          .returning();
+
+        return video;
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+        console.error("Failed to finalize video", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to finalize video. Please try again.",
+        });
+      }
+    }),
+
+  getUploadStatus: protectedProcedure
+    .input(z.object({ uploadId: z.string() }))
+    .query(async ({ input }) => {
+      try {
+        ensureMuxCredentials();
+        const upload = await mux.video.uploads.retrieve(input.uploadId);
+
+        if (!upload.asset_id) {
+          return {
+            status: upload.status,
+            assetId: null,
+            playbackId: null,
+            ready: false,
+          };
+        }
+
+        const asset = await mux.video.assets.retrieve(upload.asset_id);
+        const playbackId = asset.playback_ids?.[0]?.id;
+
+        return {
+          status: asset.status,
+          assetId: asset.id,
+          playbackId,
+          ready: asset.status === "ready" && !!playbackId,
+          duration: asset.duration ? Math.round(asset.duration * 1000) : 0,
+          thumbnailUrl: playbackId ? `https://image.mux.com/${playbackId}/thumbnail.png` : null,
+          previewUrl: playbackId ? `https://image.mux.com/${playbackId}/animated.gif` : null,
+        };
+      } catch (error) {
+        console.error("Failed to get upload status", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to get upload status",
+        });
+      }
+    }),
+
   // Public procedures
+  getMany: baseProcedure
+    .input(
+      z.object({
+        categoryId: z.string().uuid().optional(),
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { categoryId, limit, cursor } = input;
+
+      const whereConditions = [
+        eq(videos.visibility, "public"),
+        categoryId ? eq(videos.categoryId, categoryId) : undefined,
+        cursor
+          ? sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: videos.id,
+          title: videos.title,
+          description: videos.description,
+          thumbnailUrl: videos.thumbnailUrl,
+          previewUrl: videos.previewUrl,
+          muxPlaybackId: videos.muxPlaybackId,
+          duration: videos.duration,
+          createdAt: videos.createdAt,
+          userId: videos.userId,
+          userName: users.name,
+          userImageUrl: users.imageUrl,
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(videos.createdAt), desc(videos.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
   getPublic: baseProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input }) => {

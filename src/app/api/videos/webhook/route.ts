@@ -72,16 +72,27 @@ export const POST = async (request: NextRequest) => {
         if (!data.upload_id) {
           return new Response("Upload ID is not set", { status: 400 });
         }
-        await db
-          .update(videos)
-          .set({
-            muxAssetId: data.id,
-            muxStatus: data.status,
-            updatedAt: new Date(),
-          })
-          .where(eq(videos.muxUploadId, data.upload_id));
+        
+        // Solo actualizar si el video existe en la BD
+        const existingVideo = await db
+          .select()
+          .from(videos)
+          .where(eq(videos.muxUploadId, data.upload_id))
+          .limit(1);
 
-        console.log("✅ Video asset created:", data.id);
+        if (existingVideo.length > 0) {
+          await db
+            .update(videos)
+            .set({
+              muxAssetId: data.id,
+              muxStatus: data.status,
+              updatedAt: new Date(),
+            })
+            .where(eq(videos.muxUploadId, data.upload_id));
+          console.log("✅ Video asset created:", data.id);
+        } else {
+          console.log("ℹ️  Video asset created but video not in DB yet (will be created when finalized):", data.id);
+        }
         break;
       }
 
@@ -95,6 +106,18 @@ export const POST = async (request: NextRequest) => {
 
         if (!playbackId) {
           return new Response("Missing playback ID ", { status: 400 });
+        }
+
+        // Solo actualizar si el video existe en la BD
+        const existingVideo = await db
+          .select()
+          .from(videos)
+          .where(eq(videos.muxUploadId, data.upload_id))
+          .limit(1);
+
+        if (existingVideo.length === 0) {
+          console.log("ℹ️  Video asset ready but video not in DB yet (will be created when finalized):", data.id);
+          break;
         }
 
         const tempThumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.png`;

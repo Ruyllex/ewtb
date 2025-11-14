@@ -13,7 +13,11 @@ interface PageProps {
 
 const Page = async ({ searchParams }: PageProps) => {
   const { categoryId } = await searchParams;
-  prefetch(trpc.categories.getMany.queryOptions()); // Toma el Prefetch de la funcion del server para recibir el QueryClient
+  try {
+    await prefetch(trpc.categories.getMany.queryOptions()); // Toma el Prefetch de la funcion del server para recibir el QueryClient
+  } catch (error) {
+    console.warn("Failed to prefetch categories:", error);
+  }
   // const data = await caller.hello({ text: "Epsaind" }); => Llamada directa del server
   return <HomeView categoryId={categoryId} />;
 };

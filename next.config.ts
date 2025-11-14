@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "image.mux.com",
+      },
+      {
+        protocol: "https",
+        hostname: "img.clerk.com",
+      },
+      {
+        protocol: "https",
         hostname: "tbw27c7h9z.ufs.sh",
       },
     ],

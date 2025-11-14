@@ -44,14 +44,70 @@ export const protectedProcedure = t.procedure.use(async function isAuthed(opts) 
   }
 
   // Obtener los datos del usuario desde la base de datos
-  const [user] = await db.select().from(users).where(eq(users.clerkId, ctx.clerkUserId)).limit(1);
+  let [user] = await db.select().from(users).where(eq(users.clerkId, ctx.clerkUserId)).limit(1);
+  
+  // Si el usuario no existe, crearlo automáticamente (fallback si el webhook no funcionó)
   if (!user) {
-    throw new TRPCError({ code: "UNAUTHORIZED", message: "Not user found in database" });
+    try {
+      // Intentar obtener información del usuario desde Clerk
+      const { currentUser } = await import("@clerk/nextjs/server");
+      const clerkUser = await currentUser();
+      
+      if (clerkUser && clerkUser.id === ctx.clerkUserId) {
+        // Crear el usuario en la base de datos
+        try {
+          [user] = await db
+            .insert(users)
+            .values({
+              clerkId: clerkUser.id,
+              name: clerkUser.fullName || `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "User",
+              imageUrl: clerkUser.imageUrl || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + clerkUser.id,
+            })
+            .returning();
+        } catch (dbError: any) {
+          // Si hay un error de duplicado (usuario ya existe), intentar obtenerlo de nuevo
+          if (dbError?.code === "23505" || dbError?.message?.includes("duplicate")) {
+            [user] = await db.select().from(users).where(eq(users.clerkId, ctx.clerkUserId)).limit(1);
+          } else {
+            throw dbError;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error creating user:", error);
+      // Si no podemos crear el usuario, lanzar error
+      throw new TRPCError({ 
+        code: "UNAUTHORIZED", 
+        message: "Not user found in database and could not create user" 
+      });
+    }
+    
+    if (!user) {
+      throw new TRPCError({ 
+        code: "UNAUTHORIZED", 
+        message: "Not user found in database" 
+      });
+    }
   }
+  
   // Comprobar si el usuario ha superado el límite de peticiones
-  const { success } = await ratelimit.limit(user.id);
-  if (!success) {
-    throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+  // Solo si Redis está configurado
+  try {
+    const { success } = await ratelimit.limit(user.id);
+    if (!success) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+    }
+  } catch (rateLimitError: any) {
+    // Si Redis no está configurado o hay un error, continuar sin rate limiting
+    // Esto permite que la app funcione incluso sin Redis
+    // Solo lanzar error si es un error de TOO_MANY_REQUESTS explícito
+    if (rateLimitError?.code === "TOO_MANY_REQUESTS") {
+      throw rateLimitError;
+    }
+    // Para otros errores (como Redis no configurado), solo loguear y continuar
+    if (rateLimitError?.message && !rateLimitError.message.includes("TOO_MANY_REQUESTS")) {
+      console.warn("Rate limiting not available:", rateLimitError.message);
+    }
   }
 
   return opts.next({

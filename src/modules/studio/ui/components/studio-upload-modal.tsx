@@ -4,46 +4,88 @@ import { ResponsiveModal } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { useTRPC } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2Icon, PlusIcon } from "lucide-react";
+import { Loader2Icon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { StudioUploader } from "./studio-uploader";
-import { useRouter } from "next/navigation";
+import { VideoPreviewForm } from "./video-preview-form";
+import { useState } from "react";
+
+type UploadStep = "idle" | "uploading" | "preview";
 
 export const StudioUploadModal = () => {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const router = useRouter();
+  const [step, setStep] = useState<UploadStep>("idle");
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [uploadUrl, setUploadUrl] = useState<string | null>(null);
 
   const create = useMutation(
     trpc.videos.create.mutationOptions({
-      onSuccess: () => {
-        toast.success("Video Creado con exito");
-        queryClient.invalidateQueries({ refetchType: "active" });
+      onSuccess: (data) => {
+        setUploadId(data.uploadId);
+        setUploadUrl(data.url);
+        setStep("uploading");
       },
-      onError: () => {
-        toast.error("Error al crear el video");
+      onError: (error) => {
+        toast.error(error.message || "Error al crear el upload");
       },
     })
   );
 
-  const onSuccess = () => {
-    if (!create.data?.video.id) return;
-
-    create.reset();
-    router.push(`/studio/videos/${create.data.video.id}`);
+  const handleUploadComplete = (completedUploadId: string) => {
+    setStep("preview");
+    toast.success("Video subido exitosamente. Completa la información para guardarlo.");
   };
+
+  const handleCancel = () => {
+    setStep("idle");
+    setUploadId(null);
+    setUploadUrl(null);
+    create.reset();
+  };
+
+  const handleFinalize = () => {
+    queryClient.invalidateQueries({ refetchType: "active" });
+    handleCancel();
+  };
+
+  const isOpen = step !== "idle";
 
   return (
     <>
       <ResponsiveModal
-        title="Upload a video"
-        open={!!create.data?.url}
-        onOpenChange={() => create.reset()}
+        title={
+          step === "uploading"
+            ? "Subir video"
+            : step === "preview"
+              ? "Previsualizar y configurar video"
+              : "Subir video"
+        }
+        open={isOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCancel();
+          }
+        }}
       >
-        {create.data?.url ? (
-          <StudioUploader endpoint={create.data?.url} onSuccess={onSuccess} />
-        ) : (
-          <Loader2Icon />
+        {step === "uploading" && uploadId && uploadUrl && (
+          <div className="space-y-4">
+            <StudioUploader
+              endpoint={uploadUrl}
+              uploadId={uploadId}
+              onUploadComplete={handleUploadComplete}
+            />
+          </div>
+        )}
+
+        {step === "preview" && uploadId && (
+          <VideoPreviewForm uploadId={uploadId} onCancel={handleCancel} />
+        )}
+
+        {step === "idle" && create.isPending && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2Icon className="animate-spin size-8" />
+          </div>
         )}
       </ResponsiveModal>
 
@@ -51,10 +93,10 @@ export const StudioUploadModal = () => {
         variant={"secondary"}
         onClick={() => create.mutate()}
         className="cursor-pointer"
-        disabled={create.isPending}
+        disabled={create.isPending || isOpen}
       >
         {create.isPending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
-        Create
+        Subir Video
       </Button>
     </>
   );

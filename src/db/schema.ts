@@ -100,3 +100,25 @@ export const viewRelations = relations(views, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+export const liveStreams = pgTable("live_streams", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  description: text("description"),
+  streamKey: text("stream_key").unique().notNull(),
+  playbackId: text("playback_id").unique(),
+  status: text("status").default("idle").notNull(), // idle, active, disconnected
+  muxLiveStreamId: text("mux_live_stream_id").unique(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const liveStreamRelations = relations(liveStreams, ({ one }) => ({
+  user: one(users, {
+    fields: [liveStreams.userId],
+    references: [users.id],
+  }),
+}));

@@ -10,7 +10,7 @@ const VideoPage = async ({ params }: VideoPageProps) => {
   const { videoId } = await params;
 
   try {
-    prefetch(trpc.videos.getPublic.queryOptions({ id: videoId }));
+    await prefetch(trpc.videos.getPublic.queryOptions({ id: videoId }));
   } catch (error) {
     notFound();
   }
