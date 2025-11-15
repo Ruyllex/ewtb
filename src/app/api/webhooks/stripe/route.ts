@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { db } from "@/db";
-import { users, transactions, balances, payouts } from "@/db/schema";
-import { eq, and } from "drizzle-orm";
+import { users, transactions, balances, payouts, videos } from "@/db/schema";
+import { eq, and, sql } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2024-12-18.acacia",
@@ -91,38 +91,45 @@ export async function POST(req: NextRequest) {
               })
               .where(eq(transactions.id, transaction.id));
 
-            // Actualizar el balance del creador
-            const amount = parseFloat(transaction.amount);
-            const [balance] = await db
-              .select()
-              .from(balances)
-              .where(eq(balances.userId, transaction.userId))
-              .limit(1);
+            // Verificar si el creador tiene cuenta de Stripe
+            // Si no tiene, guardar en el balance para retirar después
+            const hasStripeAccount = paymentIntent.metadata?.hasStripeAccount === "true";
 
-            if (balance) {
-              // Calcular el monto que recibe el creador (después de fees)
-              const platformFee = amount * 0.029 + 0.3; // 2.9% + $0.30
-              const creatorAmount = amount - platformFee;
+            // Si no tiene cuenta de Stripe, actualizar el balance
+            // Si tiene cuenta, el dinero ya fue transferido directamente
+            if (!hasStripeAccount) {
+              const amount = parseFloat(transaction.amount);
+              const [balance] = await db
+                .select()
+                .from(balances)
+                .where(eq(balances.userId, transaction.userId))
+                .limit(1);
 
-              await db
-                .update(balances)
-                .set({
-                  availableBalance: (parseFloat(balance.availableBalance) + creatorAmount).toFixed(2),
-                  totalEarned: (parseFloat(balance.totalEarned) + creatorAmount).toFixed(2),
-                  updatedAt: new Date(),
-                })
-                .where(eq(balances.id, balance.id));
-            } else {
-              // Crear un nuevo balance si no existe
-              const platformFee = amount * 0.029 + 0.3;
-              const creatorAmount = amount - platformFee;
+              if (balance) {
+                // Calcular el monto que recibe el creador (después de fees)
+                const platformFee = amount * 0.029 + 0.3; // 2.9% + $0.30
+                const creatorAmount = amount - platformFee;
 
-              await db.insert(balances).values({
-                userId: transaction.userId,
-                availableBalance: creatorAmount.toFixed(2),
-                totalEarned: creatorAmount.toFixed(2),
-                currency: "usd",
-              });
+                await db
+                  .update(balances)
+                  .set({
+                    availableBalance: (parseFloat(balance.availableBalance) + creatorAmount).toFixed(2),
+                    totalEarned: (parseFloat(balance.totalEarned) + creatorAmount).toFixed(2),
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(balances.id, balance.id));
+              } else {
+                // Crear un nuevo balance si no existe
+                const platformFee = amount * 0.029 + 0.3;
+                const creatorAmount = amount - platformFee;
+
+                await db.insert(balances).values({
+                  userId: transaction.userId,
+                  availableBalance: creatorAmount.toFixed(2),
+                  totalEarned: creatorAmount.toFixed(2),
+                  currency: "usd",
+                });
+              }
             }
           }
         }
@@ -165,7 +172,7 @@ export async function POST(req: NextRequest) {
           })
           .where(eq(users.stripeAccountId, account.id));
 
-        // Si la cuenta está activa, verificar si puede monetizar
+        // Si la cuenta está activa, verificar si puede monetizar automáticamente
         if (accountStatus === "active") {
           const [user] = await db
             .select()
@@ -174,9 +181,44 @@ export async function POST(req: NextRequest) {
             .limit(1);
 
           if (user) {
-            // Verificar requisitos de monetización (edad, contenido mínimo, etc.)
-            // Esto se puede hacer en un procedimiento separado
-            // Por ahora, solo actualizamos el estado
+            // Verificar requisitos de monetización
+            const reasons: string[] = [];
+            const MIN_AGE_YEARS = 18;
+            const MIN_VIDEOS = 5;
+
+            // Verificar edad mínima
+            if (!user.dateOfBirth) {
+              reasons.push("Fecha de nacimiento no registrada");
+            } else {
+              const age = new Date().getFullYear() - new Date(user.dateOfBirth).getFullYear();
+              if (age < MIN_AGE_YEARS) {
+                reasons.push(`Debes tener al menos ${MIN_AGE_YEARS} años`);
+              }
+            }
+
+            // Verificar contenido mínimo
+            const videoCount = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(videos)
+              .where(and(eq(videos.userId, user.id), eq(videos.visibility, "public")));
+
+            const count = Number(videoCount[0]?.count || 0);
+            if (count < MIN_VIDEOS) {
+              reasons.push(`Necesitas al menos ${MIN_VIDEOS} videos públicos`);
+            }
+
+            // Si cumple todos los requisitos, habilitar monetización automáticamente
+            const canMonetize = reasons.length === 0;
+            if (canMonetize && !user.canMonetize) {
+              await db
+                .update(users)
+                .set({
+                  canMonetize: true,
+                  updatedAt: new Date(),
+                })
+                .where(eq(users.id, user.id));
+              console.log("✅ Monetización habilitada automáticamente para usuario:", user.id);
+            }
           }
         }
         break;
@@ -189,6 +231,122 @@ export async function POST(req: NextRequest) {
           amount: transfer.amount,
           destination: transfer.destination,
         });
+
+        // Si es un payout, actualizar el estado del payout en la base de datos
+        if (transfer.metadata?.type === "payout") {
+          const [payout] = await db
+            .select()
+            .from(payouts)
+            .where(eq(payouts.stripeTransferId, transfer.id))
+            .limit(1);
+
+          if (payout) {
+            // El transfer se creó exitosamente, pero el payout aún está pendiente
+            // Se actualizará cuando llegue el evento payout.paid
+            console.log("Transfer asociado a payout:", payout.id);
+          }
+        }
+        break;
+      }
+
+      case "transfer.paid": {
+        const transfer = event.data.object as Stripe.Transfer;
+        console.log("✅ Transfer pagado:", {
+          transferId: transfer.id,
+          amount: transfer.amount,
+          destination: transfer.destination,
+        });
+
+        // Si es un payout, actualizar el estado
+        if (transfer.metadata?.type === "payout") {
+          const [payout] = await db
+            .select()
+            .from(payouts)
+            .where(eq(payouts.stripeTransferId, transfer.id))
+            .limit(1);
+
+          if (payout && payout.status === "pending") {
+            await db
+              .update(payouts)
+              .set({
+                status: "completed",
+                processedAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(eq(payouts.id, payout.id));
+
+            // Actualizar el balance pendiente
+            const [balance] = await db
+              .select()
+              .from(balances)
+              .where(eq(balances.userId, payout.userId))
+              .limit(1);
+
+            if (balance) {
+              const pendingAmount = parseFloat(balance.pendingBalance);
+              const payoutAmount = parseFloat(payout.amount);
+              await db
+                .update(balances)
+                .set({
+                  pendingBalance: Math.max(0, pendingAmount - payoutAmount).toFixed(2),
+                  updatedAt: new Date(),
+                })
+                .where(eq(balances.id, balance.id));
+            }
+          }
+        }
+        break;
+      }
+
+      case "transfer.failed": {
+        const transfer = event.data.object as Stripe.Transfer;
+        console.error("❌ Transfer fallido:", {
+          transferId: transfer.id,
+          amount: transfer.amount,
+          destination: transfer.destination,
+        });
+
+        // Si es un payout, actualizar el estado y revertir el balance
+        if (transfer.metadata?.type === "payout") {
+          const [payout] = await db
+            .select()
+            .from(payouts)
+            .where(eq(payouts.stripeTransferId, transfer.id))
+            .limit(1);
+
+          if (payout) {
+            await db
+              .update(payouts)
+              .set({
+                status: "failed",
+                failureReason: "Transfer failed",
+                updatedAt: new Date(),
+              })
+              .where(eq(payouts.id, payout.id));
+
+            // Revertir el balance: mover de pending a available
+            const [balance] = await db
+              .select()
+              .from(balances)
+              .where(eq(balances.userId, payout.userId))
+              .limit(1);
+
+            if (balance) {
+              const pendingAmount = parseFloat(balance.pendingBalance);
+              const availableAmount = parseFloat(balance.availableBalance);
+              const payoutAmount = parseFloat(payout.amount);
+
+              await db
+                .update(balances)
+                .set({
+                  availableBalance: (availableAmount + payoutAmount).toFixed(2),
+                  pendingBalance: Math.max(0, pendingAmount - payoutAmount).toFixed(2),
+                  updatedAt: new Date(),
+                })
+                .where(eq(balances.id, balance.id));
+            }
+          }
+        }
         break;
       }
 
@@ -199,15 +357,42 @@ export async function POST(req: NextRequest) {
           amount: payout.amount,
         });
 
-        // Actualizar el payout en la base de datos
-        await db
-          .update(payouts)
-          .set({
-            status: "completed",
-            processedAt: new Date(payout.created * 1000),
-            updatedAt: new Date(),
-          })
-          .where(eq(payouts.stripePayoutId, payout.id));
+        // Actualizar el payout en la base de datos si existe
+        const [existingPayout] = await db
+          .select()
+          .from(payouts)
+          .where(eq(payouts.stripePayoutId, payout.id))
+          .limit(1);
+
+        if (existingPayout && existingPayout.status === "pending") {
+          await db
+            .update(payouts)
+            .set({
+              status: "completed",
+              processedAt: new Date(payout.created * 1000),
+              updatedAt: new Date(),
+            })
+            .where(eq(payouts.id, existingPayout.id));
+
+          // Actualizar el balance pendiente
+          const [balance] = await db
+            .select()
+            .from(balances)
+            .where(eq(balances.userId, existingPayout.userId))
+            .limit(1);
+
+          if (balance) {
+            const pendingAmount = parseFloat(balance.pendingBalance);
+            const payoutAmount = parseFloat(existingPayout.amount);
+            await db
+              .update(balances)
+              .set({
+                pendingBalance: Math.max(0, pendingAmount - payoutAmount).toFixed(2),
+                updatedAt: new Date(),
+              })
+              .where(eq(balances.id, balance.id));
+          }
+        }
         break;
       }
 
@@ -219,15 +404,45 @@ export async function POST(req: NextRequest) {
           failureMessage: payout.failure_message,
         });
 
-        // Actualizar el payout como fallido
-        await db
-          .update(payouts)
-          .set({
-            status: "failed",
-            failureReason: payout.failure_message || payout.failure_code || "Unknown error",
-            updatedAt: new Date(),
-          })
-          .where(eq(payouts.stripePayoutId, payout.id));
+        // Actualizar el payout como fallido y revertir el balance
+        const [existingPayout] = await db
+          .select()
+          .from(payouts)
+          .where(eq(payouts.stripePayoutId, payout.id))
+          .limit(1);
+
+        if (existingPayout) {
+          await db
+            .update(payouts)
+            .set({
+              status: "failed",
+              failureReason: payout.failure_message || payout.failure_code || "Unknown error",
+              updatedAt: new Date(),
+            })
+            .where(eq(payouts.id, existingPayout.id));
+
+          // Revertir el balance: mover de pending a available
+          const [balance] = await db
+            .select()
+            .from(balances)
+            .where(eq(balances.userId, existingPayout.userId))
+            .limit(1);
+
+          if (balance) {
+            const pendingAmount = parseFloat(balance.pendingBalance);
+            const availableAmount = parseFloat(balance.availableBalance);
+            const payoutAmount = parseFloat(existingPayout.amount);
+
+            await db
+              .update(balances)
+              .set({
+                availableBalance: (availableAmount + payoutAmount).toFixed(2),
+                pendingBalance: Math.max(0, pendingAmount - payoutAmount).toFixed(2),
+                updatedAt: new Date(),
+              })
+              .where(eq(balances.id, balance.id));
+          }
+        }
         break;
       }
 

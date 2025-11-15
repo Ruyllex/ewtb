@@ -130,15 +130,14 @@ export const monetizationRouter = createTRPCRouter({
 
     const check = await canUserMonetize(userId);
 
-    if (check.can) {
-      await db
-        .update(users)
-        .set({
-          canMonetize: true,
-          updatedAt: new Date(),
-        })
-        .where(eq(users.id, userId));
-    }
+    // Actualizar el flag canMonetize basado en la verificación
+    await db
+      .update(users)
+      .set({
+        canMonetize: check.can,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
 
     return check;
   }),

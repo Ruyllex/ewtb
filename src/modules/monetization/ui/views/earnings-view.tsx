@@ -125,8 +125,11 @@ export const EarningsView = () => {
             <h1 className="text-3xl font-bold">Ganancias</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus ganancias y retiros</p>
           </div>
-          {connectStatus?.connected && connectStatus.accountStatus?.status === "active" && (
-            <Button onClick={() => setShowPayoutModal(true)} disabled={parseFloat(balance.availableBalance) < 1}>
+          {parseFloat(balance.availableBalance) > 0 && (
+            <Button 
+              onClick={() => setShowPayoutModal(true)} 
+              disabled={parseFloat(balance.availableBalance) < 1 || !connectStatus?.connected || connectStatus.accountStatus?.status !== "active"}
+            >
               <WalletIcon className="size-4 mr-2" />
               Retirar
             </Button>
@@ -142,7 +145,12 @@ export const EarningsView = () => {
                 Conecta tu cuenta de Stripe
               </CardTitle>
               <CardDescription>
-                Para recibir pagos, necesitas vincular tu cuenta de Stripe Connect. Es rápido y seguro.
+                Puedes recibir donaciones y suscripciones, pero necesitas vincular tu cuenta de Stripe Connect para retirar tus ganancias. Es rápido y seguro.
+                {parseFloat(balance.availableBalance) > 0 && (
+                  <span className="block mt-2 font-semibold text-yellow-800 dark:text-yellow-200">
+                    Tienes ${parseFloat(balance.availableBalance).toFixed(2)} esperando para retirar.
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -377,34 +385,46 @@ export const EarningsView = () => {
             </p>
           </div>
 
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setShowPayoutModal(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                if (!payoutAmount || parseFloat(payoutAmount) < 1) {
-                  toast.error("Ingresa un monto válido");
-                  return;
-                }
-                if (parseFloat(payoutAmount) > parseFloat(balance.availableBalance)) {
-                  toast.error("El monto excede tu saldo disponible");
-                  return;
-                }
-                createPayout.mutate({ amount: parseFloat(payoutAmount) });
-              }}
-              disabled={createPayout.isPending}
-            >
-              {createPayout.isPending ? (
-                <>
-                  <Loader2Icon className="size-4 mr-2 animate-spin" />
-                  Procesando...
-                </>
-              ) : (
-                "Confirmar Retiro"
-              )}
-            </Button>
-          </div>
+          {!connectStatus?.connected || connectStatus.accountStatus?.status !== "active" ? (
+            <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
+                Necesitas conectar y verificar tu cuenta de Stripe Connect para retirar fondos.
+              </p>
+              <Button onClick={handleConnectStripe} className="w-full">
+                <CreditCardIcon className="size-4 mr-2" />
+                Conectar Stripe
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setShowPayoutModal(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (!payoutAmount || parseFloat(payoutAmount) < 1) {
+                    toast.error("Ingresa un monto válido");
+                    return;
+                  }
+                  if (parseFloat(payoutAmount) > parseFloat(balance.availableBalance)) {
+                    toast.error("El monto excede tu saldo disponible");
+                    return;
+                  }
+                  createPayout.mutate({ amount: parseFloat(payoutAmount) });
+                }}
+                disabled={createPayout.isPending}
+              >
+                {createPayout.isPending ? (
+                  <>
+                    <Loader2Icon className="size-4 mr-2 animate-spin" />
+                    Procesando...
+                  </>
+                ) : (
+                  "Confirmar Retiro"
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </ResponsiveModal>
     </div>

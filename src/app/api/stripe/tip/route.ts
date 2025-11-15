@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
           id: users.id,
           name: users.name,
           stripeAccountId: users.stripeAccountId,
+          stripeAccountStatus: users.stripeAccountStatus,
           canMonetize: users.canMonetize,
         },
       })
@@ -61,11 +62,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Video no encontrado" }, { status: 404 });
     }
 
-    // Verificar que el creador puede recibir pagos
-    if (!video.user.canMonetize || !video.user.stripeAccountId) {
+    // Verificar que el creador tiene monetización habilitada
+    if (!video.user.canMonetize) {
       return NextResponse.json(
         { error: "Este creador no tiene la monetización habilitada" },
-        { status: 400 }
+        { status: 403 }
       );
     }
 
@@ -80,23 +81,35 @@ export async function POST(req: NextRequest) {
     const platformFee = Math.round(amount * PLATFORM_FEE_PERCENTAGE + PLATFORM_FEE_FIXED);
     const creatorAmount = amount - platformFee;
 
-    // Crear un PaymentIntent con destino a la cuenta del creador
-    const paymentIntent = await stripe.paymentIntents.create({
+    // Si el creador tiene cuenta de Stripe verificada, transferir directamente
+    // Si no, guardar en el balance para retirar después
+    const hasStripeAccount = video.user.stripeAccountId && video.user.stripeAccountStatus === "active";
+
+    // Crear un PaymentIntent
+    const paymentIntentData: Stripe.PaymentIntentCreateParams = {
       amount: amount,
       currency: "usd",
-      application_fee_amount: platformFee,
-      transfer_data: {
-        destination: video.user.stripeAccountId,
-      },
       metadata: {
         type: "tip",
         videoId: videoId,
         creatorId: video.user.id,
         payerId: payer.id,
         message: message || "",
+        hasStripeAccount: String(hasStripeAccount),
       },
       description: `Tip para ${video.user.name} - ${video.title}`,
-    });
+    };
+
+    // Si tiene cuenta de Stripe, transferir directamente
+    if (hasStripeAccount) {
+      paymentIntentData.application_fee_amount = platformFee;
+      paymentIntentData.transfer_data = {
+        destination: video.user.stripeAccountId!,
+      };
+    }
+    // Si no tiene cuenta, el pago va a la cuenta de la plataforma y se guarda en el balance
+
+    const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
 
     // Crear la transacción en la base de datos
     const [transaction] = await db

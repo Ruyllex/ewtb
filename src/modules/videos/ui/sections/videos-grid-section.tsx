@@ -6,6 +6,7 @@ import { VideoCard } from "../components/video-card";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorBoundary } from "react-error-boundary";
+import { useState, useEffect } from "react";
 
 interface VideosGridSectionProps {
   categoryId?: string;
@@ -46,6 +47,21 @@ export const VideosGridSection = ({ categoryId }: VideosGridSectionProps) => {
 };
 
 const VideosGridSectionSuspense = ({ categoryId }: VideosGridSectionProps) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Si no está montado, mostrar skeleton (esto evita que useTRPC se llame antes de que el provider esté disponible)
+  if (!mounted) {
+    return <VideosGridSkeleton />;
+  }
+
+  return <VideosGridSectionContent categoryId={categoryId} />;
+};
+
+const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
   const trpc = useTRPC();
   const {
     data,

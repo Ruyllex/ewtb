@@ -9,13 +9,19 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { LogOutIcon, VideoIcon, RadioIcon, DollarSignIcon } from "lucide-react";
+import { LogOutIcon, VideoIcon, RadioIcon, DollarSignIcon, SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StudioSidebarHeader } from "./studio-sidebar-header";
+import { useState, useEffect } from "react";
 
 export const StudioSidebar = () => {
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <Sidebar className="pt-16 z-40" collapsible="icon">
@@ -24,7 +30,7 @@ export const StudioSidebar = () => {
           <SidebarMenu>
             <StudioSidebarHeader />
             <SidebarMenuItem>
-              <SidebarMenuButton isActive={pathname === "/studio"} tooltip={"Content"} asChild>
+              <SidebarMenuButton isActive={mounted && pathname === "/studio"} tooltip={"Content"} asChild>
                 <Link href={"/studio"} prefetch>
                   <VideoIcon className="size-5" />
                   <span className="text-sm">Content</span>
@@ -33,7 +39,7 @@ export const StudioSidebar = () => {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={pathname?.startsWith("/studio/live")}
+                isActive={mounted && pathname?.startsWith("/studio/live")}
                 tooltip={"Live Streams"}
                 asChild
               >
@@ -45,7 +51,7 @@ export const StudioSidebar = () => {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={pathname?.startsWith("/studio/earnings")}
+                isActive={mounted && pathname?.startsWith("/studio/earnings")}
                 tooltip={"Earnings"}
                 asChild
               >
@@ -55,7 +61,19 @@ export const StudioSidebar = () => {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <Separator />
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={mounted && pathname?.startsWith("/studio/settings")}
+                tooltip={"Settings"}
+                asChild
+              >
+                <Link href={"/studio/settings"} prefetch>
+                  <SettingsIcon className="size-5" />
+                  <span className="text-sm">Settings</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+                <Separator />
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={"Exit studio"} asChild>
                 <Link href={"/"} prefetch>

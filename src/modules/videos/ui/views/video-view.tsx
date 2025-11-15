@@ -121,17 +121,19 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                 <h3 className="font-semibold">{video.userName}</h3>
                 <p className="text-sm text-muted-foreground">Creator</p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setMonetizationOpen(true)}
-                  className="gap-2"
-                >
-                  <HeartIcon className="size-4" />
-                  <CrownIcon className="size-4" />
-                  Apoyar
-                </Button>
-              </div>
+              {video.userCanMonetize && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setMonetizationOpen(true)}
+                    className="gap-2"
+                  >
+                    <HeartIcon className="size-4" />
+                    <CrownIcon className="size-4" />
+                    Apoyar
+                  </Button>
+                </div>
+              )}
             </div>
 
             {/* Description */}

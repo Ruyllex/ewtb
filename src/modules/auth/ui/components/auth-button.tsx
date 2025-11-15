@@ -2,11 +2,26 @@
 
 import { Button } from "@/components/ui/button";
 import { ClapperboardIcon, LoaderIcon, UserCircleIcon } from "lucide-react";
+import { useState, useEffect } from "react";
 
 import { ClerkLoading, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 
 export const AuthButton = () => {
-  // TODO: Add different auth states
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Renderizar un placeholder durante SSR para evitar errores de hidratación
+  if (!mounted) {
+    return (
+      <div className="w-full flex items-center justify-center">
+        <LoaderIcon className="h-5 w-5 text-gray-500/80 animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <>
       <ClerkLoading>

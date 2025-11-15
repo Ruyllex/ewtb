@@ -38,12 +38,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Usuario de Clerk no encontrado" }, { status: 404 });
     }
 
-    // Si ya tiene una cuenta de Stripe Connect, retornar la URL de onboarding
+    // Si ya tiene una cuenta de Stripe Connect, retornar la URL de onboarding o dashboard
     if (user.stripeAccountId) {
       const account = await stripe.accounts.retrieve(user.stripeAccountId);
 
+      // Actualizar el estado de la cuenta en la base de datos
+      const accountStatus = account.charges_enabled && account.payouts_enabled ? "active" : "pending";
+      await db
+        .update(users)
+        .set({
+          stripeAccountStatus: accountStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id));
+
       // Si la cuenta no está completamente activa, crear un nuevo link de onboarding
-      if (account.details_submitted === false) {
+      if (!account.details_submitted || !account.charges_enabled || !account.payouts_enabled) {
         const accountLink = await stripe.accountLinks.create({
           account: user.stripeAccountId,
           refresh_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/studio/earnings?refresh=true`,
@@ -56,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       // Si la cuenta está activa, retornar el dashboard de Stripe
       const loginLink = await stripe.accounts.createLoginLink(user.stripeAccountId);
-      return NextResponse.json({ url: loginLink.url, accountStatus: account.charges_enabled ? "active" : "pending" });
+      return NextResponse.json({ url: loginLink.url, accountStatus: "active" });
     }
 
     // Crear una nueva cuenta de Stripe Connect

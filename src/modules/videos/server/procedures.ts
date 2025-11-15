@@ -339,6 +339,7 @@ export const videosRouter = createTRPCRouter({
           categoryId: videos.categoryId,
           userName: users.name,
           userImageUrl: users.imageUrl,
+          userCanMonetize: users.canMonetize,
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id))
