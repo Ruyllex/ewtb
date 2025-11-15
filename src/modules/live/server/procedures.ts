@@ -30,11 +30,16 @@ export const liveRouter = createTRPCRouter({
         ensureMuxCredentials();
 
         // Crear live stream en Mux
+        // Siguiendo las mejores prácticas de Mux para live streaming
         const liveStream = await mux.video.liveStreams.create({
           playback_policy: ["public"],
           new_asset_settings: {
             playback_policy: ["public"],
           },
+          // Opciones adicionales recomendadas por Mux
+          reduced_latency: true, // Reducir latencia para transmisiones en vivo
+          reconnect_window: 60, // Ventana de reconexión en segundos
+          passthrough: userId, // Metadata personalizada para identificar el usuario
         });
 
         if (!liveStream.stream_key || !liveStream.playback_ids?.[0]?.id) {

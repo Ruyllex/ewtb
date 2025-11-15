@@ -8,7 +8,7 @@ import { useSuspenseQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { CopyIcon, CopyCheckIcon, Loader2Icon, TrashIcon, VideoIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
-import VideoPlayer from "@/modules/videos/ui/components/video-player";
+import MuxPlayer from "@mux/mux-player-react";
 import { useRouter } from "next/navigation";
 
 interface LiveStreamViewProps {
@@ -113,9 +113,13 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
         <div className="lg:col-span-2 space-y-4">
           <div className="aspect-video bg-black rounded-lg overflow-hidden">
             {stream.playbackId ? (
-              <VideoPlayer
+              <MuxPlayer
                 playbackId={stream.playbackId}
+                streamType="live"
                 autoPlay={false}
+                muted={false}
+                className="w-full h-full"
+                accentColor="#FF2056"
               />
             ) : (
               <div className="flex items-center justify-center h-full text-white">
@@ -214,41 +218,15 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
             )}
 
             <div className="pt-4 border-t">
-              <h3 className="font-semibold text-sm mb-2">Instrucciones paso a paso:</h3>
-              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>
-                  <strong>Abre OBS Studio</strong> (descárgalo en obsproject.com si no lo tienes)
-                </li>
-                <li>
-                  <strong>Ve a Settings → Stream</strong> (o Ajustes → Emisión)
-                </li>
-                <li>
-                  <strong>Service:</strong> Selecciona "Custom" o "Personalizado"
-                </li>
-                <li>
-                  <strong>Server:</strong> Copia y pega: <code className="bg-gray-100 px-1 rounded">rtmp://live.mux.com/app</code>
-                </li>
-                <li>
-                  <strong>Stream Key:</strong> Copia el Stream Key de arriba y pégalo aquí
-                </li>
-                <li>
-                  <strong>Haz clic en OK</strong> para guardar la configuración
-                </li>
-                <li>
-                  <strong>Agrega fuentes</strong> en OBS (pantalla, cámara, micrófono, etc.)
-                </li>
-                <li>
-                  <strong>Haz clic en "Start Streaming"</strong> en OBS
-                </li>
-                <li>
-                  <strong>Espera 10-30 segundos</strong> y el stream aparecerá arriba
-                </li>
+              <h3 className="font-semibold text-sm mb-2">Instrucciones:</h3>
+              <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Abre OBS Studio</li>
+                <li>Ve a Settings → Stream</li>
+                <li>Service: Custom</li>
+                <li>Server: rtmp://live.mux.com/app</li>
+                <li>Stream Key: Copia el key de arriba</li>
+                <li>Haz clic en Start Streaming</li>
               </ol>
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <p className="text-xs text-blue-900">
-                  💡 <strong>Tip:</strong> Si el stream no aparece, verifica que OBS esté transmitiendo (indicador rojo) y recarga esta página.
-                </p>
-              </div>
             </div>
           </div>
         </div>
