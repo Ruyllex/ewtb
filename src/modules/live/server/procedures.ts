@@ -44,26 +44,95 @@ export const liveRouter = createTRPCRouter({
           });
         }
 
-        // Guardar en BD
-        const [savedStream] = await db
-          .insert(liveStreams)
-          .values({
-            userId,
-            title: input.title,
-            description: input.description || null,
-            streamKey: liveStream.stream_key,
-            playbackId: liveStream.playback_ids[0].id,
-            muxLiveStreamId: liveStream.id,
-            status: "idle",
-          })
-          .returning();
+        // Guardar en BD - manejar errores si la tabla no existe
+        try {
+          const [savedStream] = await db
+            .insert(liveStreams)
+            .values({
+              userId,
+              title: input.title,
+              description: input.description || null,
+              streamKey: liveStream.stream_key,
+              playbackId: liveStream.playback_ids[0].id,
+              muxLiveStreamId: liveStream.id,
+              status: "idle",
+            })
+            .returning();
 
-        return savedStream;
-      } catch (error) {
-        console.error("Failed to create live stream", error);
+          return savedStream;
+        } catch (dbError: any) {
+          // Si la tabla no existe, lanzar error más claro
+          if (dbError?.message?.includes("does not exist") || dbError?.code === "42P01") {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "La tabla live_streams no existe. Ejecuta: npm run drizzle:push",
+            });
+          }
+          throw dbError;
+        }
+      } catch (error: any) {
+        console.error("Failed to create live stream", {
+          error,
+          message: error?.message,
+          status: error?.response?.status || error?.status,
+          statusText: error?.response?.statusText,
+          data: error?.response?.data,
+          hasTokenId: !!process.env.MUX_TOKEN_ID,
+          hasTokenSecret: !!process.env.MUX_TOKEN_SECRET,
+        });
+        
+        // Verificar si las credenciales están presentes
+        if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Mux credentials are missing. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your .env.local file.",
+          });
+        }
+
+        // Manejar errores específicos de Mux API
+        const status = error?.response?.status || error?.status;
+        const errorMessage = error?.response?.data?.error?.message || error?.message || "Unknown error";
+
+        if (status === 401) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid Mux credentials. Please verify your MUX_TOKEN_ID and MUX_TOKEN_SECRET are correct.",
+          });
+        }
+
+        if (status === 403) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "Mux credentials don't have permission to create live streams. Check your Mux account permissions and plan.",
+          });
+        }
+
+        if (status === 400 && (errorMessage?.includes("free plan") || errorMessage?.includes("unavailable"))) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Live Streaming no está habilitado en tu cuenta. El plan gratuito incluye $20 de créditos de prueba. Ve a https://dashboard.mux.com/settings/live-streaming para habilitar Live Streaming y activar tus créditos de prueba.",
+          });
+        }
+
+        if (status === 429) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Rate limit exceeded. Please wait a moment and try again.",
+          });
+        }
+
+        // Si el error tiene un mensaje específico de Mux, usarlo
+        if (errorMessage && errorMessage !== "Unknown error") {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Failed to create live stream: ${errorMessage}`,
+          });
+        }
+
+        // Error genérico como último recurso
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Unable to create live stream. Check your Mux credentials.",
+          message: `Unable to create live stream. ${status ? `Status: ${status}. ` : ""}Check your Mux credentials, account status, and that Live Streaming is enabled in your Mux account.`,
         });
       }
     }),
@@ -84,32 +153,45 @@ export const liveRouter = createTRPCRouter({
       const { id: userId } = ctx.user;
       const { limit, cursor } = input;
 
-      const whereConditions = [
-        eq(liveStreams.userId, userId),
-        cursor
-          ? sql`(${liveStreams.createdAt} < ${cursor.createdAt} OR (${liveStreams.createdAt} = ${cursor.createdAt} AND ${liveStreams.id} < ${cursor.id}))`
-          : undefined,
-      ].filter(Boolean);
+      try {
+        const whereConditions = [
+          eq(liveStreams.userId, userId),
+          cursor
+            ? sql`(${liveStreams.createdAt} < ${cursor.createdAt} OR (${liveStreams.createdAt} = ${cursor.createdAt} AND ${liveStreams.id} < ${cursor.id}))`
+            : undefined,
+        ].filter(Boolean);
 
-      const results = await db
-        .select()
-        .from(liveStreams)
-        .where(and(...whereConditions))
-        .orderBy(desc(liveStreams.createdAt), desc(liveStreams.id))
-        .limit(limit + 1);
+        const results = await db
+          .select()
+          .from(liveStreams)
+          .where(and(...whereConditions))
+          .orderBy(desc(liveStreams.createdAt), desc(liveStreams.id))
+          .limit(limit + 1);
 
-      const hasMore = results.length > limit;
-      const items = hasMore ? results.slice(0, -1) : results;
+        const hasMore = results.length > limit;
+        const items = hasMore ? results.slice(0, -1) : results;
 
-      const lastItem = items[items.length - 1];
-      const nextCursor = hasMore && lastItem
-        ? { id: lastItem.id, createdAt: lastItem.createdAt }
-        : null;
+        const lastItem = items[items.length - 1];
+        const nextCursor = hasMore && lastItem
+          ? { id: lastItem.id, createdAt: lastItem.createdAt }
+          : null;
 
-      return {
-        items,
-        nextCursor,
-      };
+        return {
+          items,
+          nextCursor,
+        };
+      } catch (error: any) {
+        // Si la tabla no existe, retornar lista vacía
+        if (error?.message?.includes("does not exist") || error?.code === "42P01") {
+          console.warn("Table live_streams does not exist. Run: npm run drizzle:push");
+          return {
+            items: [],
+            nextCursor: null,
+          };
+        }
+        // Para otros errores, lanzar el error
+        throw error;
+      }
     }),
 
   getOne: protectedProcedure

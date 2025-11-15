@@ -12,7 +12,8 @@
     "start": "next start",
     "lint": "next lint",
     "seed": "bun ./src/scripts/seed-categories.ts",
-    "seed:video": "bun ./src/scripts/seed-test-video.ts"
+    "seed:video": "bun ./src/scripts/seed-test-video.ts",
+    "verify:mux-live": "tsx scripts/verify-mux-live.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.34.1",

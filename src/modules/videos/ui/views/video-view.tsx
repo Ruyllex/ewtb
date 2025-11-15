@@ -1,8 +1,8 @@
 "use client";
 
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery, useMutation } from "@tanstack/react-query";
-import { Suspense, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect } from "react";
 import VideoPlayer from "../components/video-player";
 import Image from "next/image";
 import { formatDuration } from "@/lib/utils";
@@ -37,18 +37,29 @@ const VideoViewSkeleton = () => {
 };
 
 export const VideoView = ({ videoId }: VideoViewProps) => {
-  return (
-    <Suspense fallback={<VideoViewSkeleton />}>
-      <VideoViewSuspense videoId={videoId} />
-    </Suspense>
-  );
-};
-
-const VideoViewSuspense = ({ videoId }: VideoViewProps) => {
   const trpc = useTRPC();
-  const { data: video } = useSuspenseQuery(trpc.videos.getPublic.queryOptions({ id: videoId }));
+  const { data: video, error, isLoading } = useQuery(trpc.videos.getPublic.queryOptions({ id: videoId }));
 
   const recordView = useMutation(trpc.videos.recordView.mutationOptions());
+
+  // Si está cargando, mostrar skeleton
+  if (isLoading) {
+    return <VideoViewSkeleton />;
+  }
+
+  // Si hay error, mostrar mensaje
+  if (error) {
+    return (
+      <div className="max-w-[2400px] mx-auto px-4 py-6">
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Error al cargar el video. Por favor, recarga la página.</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {error.message || "Error desconocido"}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   // Record view when video is played
   useEffect(() => {

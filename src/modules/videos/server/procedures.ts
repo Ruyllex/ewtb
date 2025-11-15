@@ -349,13 +349,20 @@ export const videosRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Video not found" });
       }
 
-      // Get view count
-      const viewCountResult = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(views)
-        .where(eq(views.videoId, input.id));
+      // Get view count - manejar errores si la tabla no existe
+      let viewCount = 0;
+      try {
+        const viewCountResult = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(views)
+          .where(eq(views.videoId, input.id));
 
-      const viewCount = viewCountResult[0]?.count ?? 0;
+        viewCount = viewCountResult[0]?.count ?? 0;
+      } catch (error) {
+        // Si la tabla views no existe o hay un error, simplemente usar 0
+        console.warn("Error getting view count (table may not exist):", error);
+        viewCount = 0;
+      }
 
       return {
         ...video,
@@ -425,36 +432,54 @@ export const videosRouter = createTRPCRouter({
   recordView: baseProcedure
     .input(z.object({ videoId: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
-      // Get user ID if authenticated
-      let userId: string | null = null;
-      if (ctx.clerkUserId) {
-        const [user] = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.clerkId, ctx.clerkUserId))
-          .limit(1);
-        userId = user?.id || null;
-      }
-
-      // Check if view already exists (prevent duplicate views from same user)
-      if (userId) {
-        const existingView = await db
-          .select()
-          .from(views)
-          .where(and(eq(views.videoId, input.videoId), eq(views.userId, userId)))
-          .limit(1);
-
-        if (existingView.length > 0) {
-          return { success: true, alreadyViewed: true };
+      try {
+        // Get user ID if authenticated
+        let userId: string | null = null;
+        if (ctx.clerkUserId) {
+          const [user] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.clerkId, ctx.clerkUserId))
+            .limit(1);
+          userId = user?.id || null;
         }
+
+        // Check if view already exists (prevent duplicate views from same user)
+        if (userId) {
+          try {
+            const existingView = await db
+              .select()
+              .from(views)
+              .where(and(eq(views.videoId, input.videoId), eq(views.userId, userId)))
+              .limit(1);
+
+            if (existingView.length > 0) {
+              return { success: true, alreadyViewed: true };
+            }
+          } catch (error) {
+            // Si la tabla views no existe, simplemente retornar success sin registrar
+            console.warn("Error checking existing view (table may not exist):", error);
+            return { success: true, skipped: true };
+          }
+        }
+
+        // Record the view
+        try {
+          await db.insert(views).values({
+            videoId: input.videoId,
+            userId: userId || null,
+          });
+        } catch (error) {
+          // Si la tabla views no existe, simplemente retornar success sin registrar
+          console.warn("Error recording view (table may not exist):", error);
+          return { success: true, skipped: true };
+        }
+
+        return { success: true, alreadyViewed: false };
+      } catch (error) {
+        // Si hay cualquier otro error, simplemente retornar success para no romper la UX
+        console.warn("Error in recordView:", error);
+        return { success: true, skipped: true };
       }
-
-      // Record the view
-      await db.insert(views).values({
-        videoId: input.videoId,
-        userId: userId || null,
-      });
-
-      return { success: true, alreadyViewed: false };
     }),
 });

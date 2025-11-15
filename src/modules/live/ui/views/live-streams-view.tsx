@@ -94,9 +94,20 @@ const LiveStreamsViewSuspense = () => {
           <p className="text-sm text-muted-foreground mb-4">
             {error.message || "Error desconocido. Por favor, recarga la página."}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Si el problema persiste, asegúrate de ejecutar: npm run drizzle:push
-          </p>
+          {error.message?.includes("live_streams") && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4 text-left">
+              <p className="text-sm font-semibold text-yellow-900 mb-2">⚠️ Tabla no encontrada</p>
+              <p className="text-xs text-yellow-800 mb-3">
+                La tabla <code className="bg-yellow-100 px-1 rounded">live_streams</code> no existe en la base de datos.
+              </p>
+              <p className="text-xs text-yellow-800 mb-3">
+                Para solucionarlo, ejecuta en tu terminal:
+              </p>
+              <code className="block bg-yellow-100 px-3 py-2 rounded text-xs font-mono text-yellow-900">
+                npm run drizzle:push
+              </code>
+            </div>
+          )}
         </div>
         <CreateLiveStreamModal open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen} />
       </div>

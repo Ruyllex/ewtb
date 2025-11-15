@@ -35,7 +35,19 @@ export const CreateLiveStreamModal = ({ open, onOpenChange }: CreateLiveStreamMo
         router.push(`/studio/live/${stream.id}`);
       },
       onError: (error) => {
-        toast.error(error.message || "Error al crear el stream");
+        const errorMessage = error.message || "Error al crear el stream";
+        toast.error(errorMessage, {
+          duration: errorMessage.includes("live_streams") ? 10000 : 5000,
+        });
+        
+        // Si el error menciona la tabla, mostrar información adicional
+        if (errorMessage.includes("live_streams")) {
+          setTimeout(() => {
+            toast.info("Ejecuta 'npm run drizzle:push' en tu terminal para crear la tabla", {
+              duration: 8000,
+            });
+          }, 1000);
+        }
       },
     })
   );
