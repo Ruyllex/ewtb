@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/users/webhook",
   "/api/uploadthing",
   "/api/webhooks/stripe",
+  "/monitoring", // Sentry tunnel route
 ]);
 
 // Verificar si Clerk está configurado

@@ -75,6 +75,15 @@ export const protectedProcedure = t.procedure.use(async function isAuthed(opts) 
       }
     } catch (error) {
       console.error("Error creating user:", error);
+      // Capturar error en Sentry si está configurado
+      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+        const { captureException } = await import("@/lib/sentry");
+        captureException(error instanceof Error ? error : new Error(String(error)), {
+          context: "protectedProcedure",
+          action: "createUser",
+          clerkUserId: ctx.clerkUserId,
+        });
+      }
       // Si no podemos crear el usuario, lanzar error
       throw new TRPCError({ 
         code: "UNAUTHORIZED", 

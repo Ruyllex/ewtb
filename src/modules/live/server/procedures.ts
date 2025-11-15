@@ -76,14 +76,16 @@ export const liveRouter = createTRPCRouter({
           throw dbError;
         }
       } catch (error: any) {
-        console.error("Failed to create live stream", {
-          error,
+        // Logging con Logtail si está configurado, sino console
+        const { logServer } = await import("@/lib/logtail");
+        logServer.error("Failed to create live stream", error instanceof Error ? error : new Error(String(error)), {
           message: error?.message,
           status: error?.response?.status || error?.status,
           statusText: error?.response?.statusText,
           data: error?.response?.data,
           hasTokenId: !!process.env.MUX_TOKEN_ID,
           hasTokenSecret: !!process.env.MUX_TOKEN_SECRET,
+          userId,
         });
         
         // Verificar si las credenciales están presentes

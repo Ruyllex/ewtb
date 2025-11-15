@@ -6,6 +6,7 @@ import { UTApi } from "uploadthing/server";
 import { db } from "@/db";
 import { videos } from "@/db/schema";
 import { mux } from "@/lib/mux";
+import { logServer } from "@/lib/logtail";
 import {
   VideoAssetCreatedWebhookEvent,
   VideoAssetDeletedWebhookEvent,
@@ -32,7 +33,9 @@ type WebHookEvent =
 export const POST = async (request: NextRequest) => {
   try {
     if (!SIGNING_SECRET) {
-      console.error("MUX_WEBHOOK_SECRET is not set");
+      logServer.error("MUX_WEBHOOK_SECRET is not set", new Error("MUX_WEBHOOK_SECRET missing"), {
+        endpoint: "/api/videos/webhook",
+      });
       return new Response("MUX_WEBHOOK_SECRET is not set", { status: 500 });
     }
 
@@ -40,7 +43,9 @@ export const POST = async (request: NextRequest) => {
     const muxSignature = headersPayload.get("mux-signature");
 
     if (!muxSignature) {
-      console.error("Mux signature is not set");
+      logServer.warn("Mux signature is not set", {
+        endpoint: "/api/videos/webhook",
+      });
       return new Response("Mux signature is not set", { status: 400 });
     }
 
@@ -57,13 +62,21 @@ export const POST = async (request: NextRequest) => {
         SIGNING_SECRET
       );
     } catch (error) {
-      console.error("Failed to verify Mux webhook signature:", error);
+      logServer.error("Failed to verify Mux webhook signature", error instanceof Error ? error : new Error(String(error)), {
+        endpoint: "/api/videos/webhook",
+      });
       return new Response("Invalid signature", { status: 401 });
     }
 
-    console.log("Webhook received:", payload.type);
+    logServer.info("Webhook received", {
+      type: payload.type,
+      endpoint: "/api/videos/webhook",
+    });
+    
     if (!USE_UPLOADTHING) {
-      console.log("⚠️  UploadThing not configured - using Mux URLs directly");
+      logServer.warn("UploadThing not configured - using Mux URLs directly", {
+        endpoint: "/api/videos/webhook",
+      });
     }
 
     switch (payload.type as WebHookEvent["type"]) {
@@ -89,9 +102,17 @@ export const POST = async (request: NextRequest) => {
               updatedAt: new Date(),
             })
             .where(eq(videos.muxUploadId, data.upload_id));
-          console.log("✅ Video asset created:", data.id);
+          logServer.info("Video asset created", {
+            assetId: data.id,
+            uploadId: data.upload_id,
+            videoId: existingVideo[0].id,
+          });
         } else {
-          console.log("ℹ️  Video asset created but video not in DB yet (will be created when finalized):", data.id);
+          logServer.info("Video asset created but video not in DB yet", {
+            assetId: data.id,
+            uploadId: data.upload_id,
+            note: "Will be created when finalized",
+          });
         }
         break;
       }
@@ -116,7 +137,11 @@ export const POST = async (request: NextRequest) => {
           .limit(1);
 
         if (existingVideo.length === 0) {
-          console.log("ℹ️  Video asset ready but video not in DB yet (will be created when finalized):", data.id);
+          logServer.info("Video asset ready but video not in DB yet", {
+            assetId: data.id,
+            uploadId: data.upload_id,
+            note: "Will be created when finalized",
+          });
           break;
         }
 
@@ -132,7 +157,10 @@ export const POST = async (request: NextRequest) => {
         // Si UploadThing está configurado, subir las imágenes allí
         if (USE_UPLOADTHING) {
           try {
-            console.log("📤 Uploading thumbnails to UploadThing...");
+            logServer.info("Uploading thumbnails to UploadThing", {
+              assetId: data.id,
+              uploadId: data.upload_id,
+            });
             const utapi = new UTApi();
             const [uploadedThumbnail, uploadedPreview] = await utapi.uploadFilesFromUrl([
               tempThumbnailUrl,
@@ -144,15 +172,27 @@ export const POST = async (request: NextRequest) => {
               thumbnailKey = uploadedThumbnail.data.key;
               previewUrl = uploadedPreview.data.ufsUrl;
               previewKey = uploadedPreview.data.key;
-              console.log("✅ Thumbnails uploaded to UploadThing");
+              logServer.info("Thumbnails uploaded to UploadThing", {
+                assetId: data.id,
+                uploadId: data.upload_id,
+              });
             } else {
-              console.warn("⚠️  Failed to upload to UploadThing, using Mux URLs");
+              logServer.warn("Failed to upload to UploadThing, using Mux URLs", {
+                assetId: data.id,
+                uploadId: data.upload_id,
+              });
             }
           } catch (error) {
-            console.error("⚠️  Error uploading to UploadThing, using Mux URLs:", error);
+            logServer.error("Error uploading to UploadThing, using Mux URLs", error instanceof Error ? error : new Error(String(error)), {
+              assetId: data.id,
+              uploadId: data.upload_id,
+            });
           }
         } else {
-          console.log("ℹ️  Using Mux URLs directly (UploadThing not configured)");
+          logServer.info("Using Mux URLs directly (UploadThing not configured)", {
+            assetId: data.id,
+            uploadId: data.upload_id,
+          });
         }
 
         await db
@@ -170,7 +210,12 @@ export const POST = async (request: NextRequest) => {
           })
           .where(eq(videos.muxUploadId, data.upload_id));
 
-        console.log("✅ Video asset ready:", data.id);
+        logServer.info("Video asset ready", {
+          assetId: data.id,
+          uploadId: data.upload_id,
+          playbackId,
+          videoId: existingVideo[0].id,
+        });
         break;
       }
 
@@ -187,7 +232,11 @@ export const POST = async (request: NextRequest) => {
           })
           .where(eq(videos.muxUploadId, data.upload_id));
 
-        console.error("❌ Video asset errored:", data.id, data.errors);
+        logServer.error("Video asset errored", new Error("Mux video processing error"), {
+          assetId: data.id,
+          uploadId: data.upload_id,
+          errors: data.errors,
+        });
         break;
       }
 
@@ -241,7 +290,10 @@ export const POST = async (request: NextRequest) => {
 
     return new Response("Webhook processed", { status: 200 });
   } catch (error) {
-    console.error("Unhandled webhook error", error);
+    logServer.error("Unhandled webhook error", error instanceof Error ? error : new Error(String(error)), {
+      endpoint: "/api/videos/webhook",
+      payloadType: payload?.type,
+    });
     return new Response("Internal Server Error", { status: 500 });
   }
 };
