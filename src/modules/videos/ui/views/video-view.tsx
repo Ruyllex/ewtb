@@ -2,11 +2,14 @@
 
 import { useTRPC } from "@/trpc/client";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import VideoPlayer from "../components/video-player";
 import Image from "next/image";
 import { formatDuration } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
+import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
+import { Button } from "@/components/ui/button";
+import { HeartIcon, CrownIcon } from "lucide-react";
 
 interface VideoViewProps {
   videoId: string;
@@ -39,6 +42,7 @@ const VideoViewSkeleton = () => {
 export const VideoView = ({ videoId }: VideoViewProps) => {
   const trpc = useTRPC();
   const { data: video, error, isLoading } = useQuery(trpc.videos.getPublic.queryOptions({ id: videoId }));
+  const [monetizationOpen, setMonetizationOpen] = useState(false);
 
   const recordView = useMutation(trpc.videos.recordView.mutationOptions());
 
@@ -117,9 +121,17 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                 <h3 className="font-semibold">{video.userName}</h3>
                 <p className="text-sm text-muted-foreground">Creator</p>
               </div>
-              <button className="px-4 py-2 bg-black text-white rounded-full hover:bg-gray-800 transition-colors">
-                Subscribe
-              </button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setMonetizationOpen(true)}
+                  className="gap-2"
+                >
+                  <HeartIcon className="size-4" />
+                  <CrownIcon className="size-4" />
+                  Apoyar
+                </Button>
+              </div>
             </div>
 
             {/* Description */}
@@ -139,6 +151,17 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
           </div>
         </div>
       </div>
+
+      {/* Monetization Modal */}
+      {video && (
+        <MonetizationModal
+          videoId={videoId}
+          creatorId={video.userId}
+          creatorName={video.userName}
+          open={monetizationOpen}
+          onOpenChange={setMonetizationOpen}
+        />
+      )}
     </div>
   );
 };

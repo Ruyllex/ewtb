@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { LogOutIcon, VideoIcon, RadioIcon } from "lucide-react";
+import { LogOutIcon, VideoIcon, RadioIcon, DollarSignIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StudioSidebarHeader } from "./studio-sidebar-header";
@@ -40,6 +40,18 @@ export const StudioSidebar = () => {
                 <Link href={"/studio/live"} prefetch>
                   <RadioIcon className="size-5" />
                   <span className="text-sm">Live Streams</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={pathname?.startsWith("/studio/earnings")}
+                tooltip={"Earnings"}
+                asChild
+              >
+                <Link href={"/studio/earnings"} prefetch>
+                  <DollarSignIcon className="size-5" />
+                  <span className="text-sm">Earnings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

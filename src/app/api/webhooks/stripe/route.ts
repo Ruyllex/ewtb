@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
+import { db } from "@/db";
+import { users, transactions, balances, payouts } from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2024-12-18.acacia",
@@ -58,16 +61,6 @@ export async function POST(req: NextRequest) {
           amountTotal: session.amount_total,
           currency: session.currency,
         });
-
-        // Aquí puedes:
-        // - Actualizar la base de datos
-        // - Enviar un email de confirmación
-        // - Activar una suscripción
-        // - Etc.
-
-        // Ejemplo: Actualizar el estado del pago en la base de datos
-        // await db.update(payments).set({ status: 'completed' }).where(eq(payments.sessionId, session.id));
-
         break;
       }
 
@@ -78,6 +71,61 @@ export async function POST(req: NextRequest) {
           amount: paymentIntent.amount,
           currency: paymentIntent.currency,
         });
+
+        // Actualizar la transacción en la base de datos
+        if (paymentIntent.metadata?.type === "tip" || paymentIntent.metadata?.type === "subscription") {
+          const [transaction] = await db
+            .select()
+            .from(transactions)
+            .where(eq(transactions.stripePaymentIntentId, paymentIntent.id))
+            .limit(1);
+
+          if (transaction) {
+            // Actualizar el estado de la transacción
+            await db
+              .update(transactions)
+              .set({
+                status: "completed",
+                stripeChargeId: paymentIntent.latest_charge as string,
+                updatedAt: new Date(),
+              })
+              .where(eq(transactions.id, transaction.id));
+
+            // Actualizar el balance del creador
+            const amount = parseFloat(transaction.amount);
+            const [balance] = await db
+              .select()
+              .from(balances)
+              .where(eq(balances.userId, transaction.userId))
+              .limit(1);
+
+            if (balance) {
+              // Calcular el monto que recibe el creador (después de fees)
+              const platformFee = amount * 0.029 + 0.3; // 2.9% + $0.30
+              const creatorAmount = amount - platformFee;
+
+              await db
+                .update(balances)
+                .set({
+                  availableBalance: (parseFloat(balance.availableBalance) + creatorAmount).toFixed(2),
+                  totalEarned: (parseFloat(balance.totalEarned) + creatorAmount).toFixed(2),
+                  updatedAt: new Date(),
+                })
+                .where(eq(balances.id, balance.id));
+            } else {
+              // Crear un nuevo balance si no existe
+              const platformFee = amount * 0.029 + 0.3;
+              const creatorAmount = amount - platformFee;
+
+              await db.insert(balances).values({
+                userId: transaction.userId,
+                availableBalance: creatorAmount.toFixed(2),
+                totalEarned: creatorAmount.toFixed(2),
+                currency: "usd",
+              });
+            }
+          }
+        }
         break;
       }
 
@@ -87,6 +135,126 @@ export async function POST(req: NextRequest) {
           id: paymentIntent.id,
           error: paymentIntent.last_payment_error,
         });
+
+        // Actualizar la transacción como fallida
+        await db
+          .update(transactions)
+          .set({
+            status: "failed",
+            updatedAt: new Date(),
+          })
+          .where(eq(transactions.stripePaymentIntentId, paymentIntent.id));
+        break;
+      }
+
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        console.log("📝 Cuenta de Stripe actualizada:", {
+          accountId: account.id,
+          chargesEnabled: account.charges_enabled,
+          payoutsEnabled: account.payouts_enabled,
+        });
+
+        // Actualizar el estado de la cuenta en la base de datos
+        const accountStatus = account.charges_enabled && account.payouts_enabled ? "active" : "pending";
+        await db
+          .update(users)
+          .set({
+            stripeAccountStatus: accountStatus,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.stripeAccountId, account.id));
+
+        // Si la cuenta está activa, verificar si puede monetizar
+        if (accountStatus === "active") {
+          const [user] = await db
+            .select()
+            .from(users)
+            .where(eq(users.stripeAccountId, account.id))
+            .limit(1);
+
+          if (user) {
+            // Verificar requisitos de monetización (edad, contenido mínimo, etc.)
+            // Esto se puede hacer en un procedimiento separado
+            // Por ahora, solo actualizamos el estado
+          }
+        }
+        break;
+      }
+
+      case "transfer.created": {
+        const transfer = event.data.object as Stripe.Transfer;
+        console.log("💸 Transfer creado:", {
+          transferId: transfer.id,
+          amount: transfer.amount,
+          destination: transfer.destination,
+        });
+        break;
+      }
+
+      case "payout.paid": {
+        const payout = event.data.object as Stripe.Payout;
+        console.log("💰 Payout pagado:", {
+          payoutId: payout.id,
+          amount: payout.amount,
+        });
+
+        // Actualizar el payout en la base de datos
+        await db
+          .update(payouts)
+          .set({
+            status: "completed",
+            processedAt: new Date(payout.created * 1000),
+            updatedAt: new Date(),
+          })
+          .where(eq(payouts.stripePayoutId, payout.id));
+        break;
+      }
+
+      case "payout.failed": {
+        const payout = event.data.object as Stripe.Payout;
+        console.error("❌ Payout fallido:", {
+          payoutId: payout.id,
+          failureCode: payout.failure_code,
+          failureMessage: payout.failure_message,
+        });
+
+        // Actualizar el payout como fallido
+        await db
+          .update(payouts)
+          .set({
+            status: "failed",
+            failureReason: payout.failure_message || payout.failure_code || "Unknown error",
+            updatedAt: new Date(),
+          })
+          .where(eq(payouts.stripePayoutId, payout.id));
+        break;
+      }
+
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log("📅 Suscripción actualizada:", {
+          subscriptionId: subscription.id,
+          status: subscription.status,
+        });
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log("🗑️ Suscripción cancelada:", {
+          subscriptionId: subscription.id,
+        });
+
+        // Actualizar la transacción
+        await db
+          .update(transactions)
+          .set({
+            status: "refunded",
+            updatedAt: new Date(),
+          })
+          .where(eq(transactions.stripeSubscriptionId, subscription.id));
         break;
       }
 
