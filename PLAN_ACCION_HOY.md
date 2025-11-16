@@ -283,7 +283,7 @@ Una vez que todo esté configurado y funcionando, esto es lo que sigue:
 
 **¿Qué permite?** Usuarios hagan streaming desde OBS
 
-**Ya hay guía completa en:** `TAREA_4_MUX_LIVE.md`
+**Nota:** Mux Live Streaming ya está implementado. Ver código en `src/modules/live/`
 
 **Salida:** Crear página para iniciar streams
 

@@ -114,20 +114,19 @@
 
 ### TAREA 4: Configurar Mux Live Streams
 
-**Estado:** ❌ No iniciado
+**Estado:** ✅ COMPLETADO
 
-**Para qué sirve:** Permitir que usuarios hagan streaming en vivo
+**Implementado:**
+- ✅ Tabla `live_streams` creada en BD
+- ✅ Endpoints tRPC para streams (`src/modules/live/server/procedures.ts`)
+- ✅ UI para iniciar/ver streams (`src/modules/live/ui/`)
+- ✅ Reproductor de video para live streams
 
 **Falta:**
+- ⚠️ Probar con OBS (configuración manual)
+- ⚠️ Habilitar créditos en Mux Dashboard
 
-- Crear tabla `live_streams` en BD
-- Crear endpoints tRPC para streams
-- UI para iniciar/ver streams
-- Probar con OBS
-
-**Tiempo estimado:** 2.5 horas
-**Guía:** `TAREA_4_MUX_LIVE.md`
-**Prioridad:** 🟡 Media (funcionalidad nueva pero no crítica)
+**Prioridad:** 🟢 Baja (ya está implementado, solo falta probar)
 
 ---
 

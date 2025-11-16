@@ -16,6 +16,7 @@ export const users = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     clerkId: text("clerk_id").unique().notNull(),
     name: text("name").notNull(),
+    username: text("username").unique(), // Username único para URLs de canales
     // Todo: add banner fields
     imageUrl: text("image_url").notNull(),
     // Campos de monetización
@@ -26,7 +27,10 @@ export const users = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
-  (t) => [uniqueIndex("clerk_id_idx").on(t.clerkId)]
+  (t) => [
+    uniqueIndex("clerk_id_idx").on(t.clerkId),
+    uniqueIndex("username_idx").on(t.username),
+  ]
 );
 
 export const userRelations = relations(users, ({ many, one }) => ({
@@ -34,6 +38,17 @@ export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
   balance: one(balances),
   payouts: many(payouts),
+  channel: one(channels, {
+    fields: [users.id],
+    references: [channels.userId],
+  }),
+  subscriptions: many(subscriptions, {
+    relationName: "subscriber",
+  }),
+  channelSubscriptions: many(subscriptions, {
+    relationName: "channel",
+  }),
+  liveStreams: many(liveStreams),
 }));
 
 export const categories = pgTable(
@@ -226,5 +241,62 @@ export const payoutRelations = relations(payouts, ({ one }) => ({
   user: one(users, {
     fields: [payouts.userId],
     references: [users.id],
+  }),
+}));
+
+// Tabla de canales
+export const channels = pgTable("channels", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull()
+    .unique(), // Un canal por usuario
+  name: text("name").notNull(),
+  description: text("description"),
+  avatar: text("avatar"), // URL del avatar del canal
+  avatarKey: text("avatar_key"), // Key de UploadThing para el avatar
+  banner: text("banner"), // URL del banner del canal
+  bannerKey: text("banner_key"), // Key de UploadThing para el banner
+  isVerified: boolean("is_verified").default(false).notNull(), // Canal verificado por admin
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const channelRelations = relations(channels, ({ one, many }) => ({
+  user: one(users, {
+    fields: [channels.userId],
+    references: [users.id],
+  }),
+  subscriptions: many(subscriptions),
+}));
+
+// Tabla de suscripciones a canales (followers)
+export const subscriptions = pgTable(
+  "subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    subscriberId: uuid("subscriber_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(), // Usuario que se suscribe
+    channelId: uuid("channel_id")
+      .references(() => channels.id, { onDelete: "cascade" })
+      .notNull(), // Canal al que se suscribe
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("subscriber_channel_idx").on(t.subscriberId, t.channelId), // Un usuario solo puede suscribirse una vez a un canal
+  ]
+);
+
+export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
+  subscriber: one(users, {
+    fields: [subscriptions.subscriberId],
+    references: [users.id],
+    relationName: "subscriber",
+  }),
+  channel: one(channels, {
+    fields: [subscriptions.channelId],
+    references: [channels.id],
+    relationName: "channel",
   }),
 }));
