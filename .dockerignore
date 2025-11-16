@@ -1,0 +1,51 @@
+# Archivos y directorios a ignorar en el build de Docker
+
+# Dependencias
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Archivos de entorno (se pasan como variables)
+.env
+.env.local
+.env*.local
+
+# Archivos de desarrollo
+.git
+.gitignore
+README.md
+*.md
+docs
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Testing
+coverage
+.nyc_output
+
+# Otros
+.DS_Store
+*.log
+*.tgz
+*.tar.gz
+
+# Archivos específicos del proyecto
+*.md
+scripts
+drizzle
+.vercel
+.netlify
+

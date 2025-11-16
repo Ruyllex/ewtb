@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { videos, videoUpdateSchema, views, users } from "@/db/schema";
+import { videos, videoUpdateSchema, views, users, channels } from "@/db/schema";
 import { mux } from "@/lib/mux";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ilike, sql, desc } from "drizzle-orm";
+import { and, eq, ilike, sql, desc, or } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import z from "zod";
 
@@ -299,6 +299,7 @@ export const videosRouter = createTRPCRouter({
           createdAt: videos.createdAt,
           userId: videos.userId,
           userName: users.name,
+          userUsername: users.username,
           userImageUrl: users.imageUrl,
         })
         .from(videos)
@@ -338,6 +339,7 @@ export const videosRouter = createTRPCRouter({
           userId: videos.userId,
           categoryId: videos.categoryId,
           userName: users.name,
+          userUsername: users.username,
           userImageUrl: users.imageUrl,
           userCanMonetize: users.canMonetize,
         })
@@ -387,17 +389,18 @@ export const videosRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { query, limit, cursor } = input;
 
-      const searchCondition = ilike(videos.title, `%${query}%`);
+      // Buscar videos por título
+      const videoSearchCondition = ilike(videos.title, `%${query}%`);
 
-      const whereConditions = [
+      const videoWhereConditions = [
         eq(videos.visibility, "public"),
-        searchCondition,
+        videoSearchCondition,
         cursor
           ? sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
           : undefined,
       ].filter(Boolean);
 
-      const results = await db
+      const videoResults = await db
         .select({
           id: videos.id,
           title: videos.title,
@@ -408,24 +411,51 @@ export const videosRouter = createTRPCRouter({
           createdAt: videos.createdAt,
           userId: videos.userId,
           userName: users.name,
+          userUsername: users.username,
           userImageUrl: users.imageUrl,
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id))
-        .where(and(...whereConditions))
+        .where(and(...videoWhereConditions))
         .orderBy(desc(videos.createdAt), desc(videos.id))
         .limit(limit + 1);
 
-      const hasMore = results.length > limit;
-      const items = hasMore ? results.slice(0, -1) : results;
+      // Buscar canales por nombre o username
+      const channelSearchCondition = or(
+        ilike(channels.name, `%${query}%`),
+        ilike(users.username, `%${query}%`)
+      );
 
-      const lastItem = items[items.length - 1];
+      const channelResults = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          description: channels.description,
+          avatar: channels.avatar,
+          banner: channels.banner,
+          isVerified: channels.isVerified,
+          userId: channels.userId,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+          createdAt: channels.createdAt,
+        })
+        .from(channels)
+        .innerJoin(users, eq(channels.userId, users.id))
+        .where(channelSearchCondition)
+        .limit(10);
+
+      const hasMore = videoResults.length > limit;
+      const videoItems = hasMore ? videoResults.slice(0, -1) : videoResults;
+
+      const lastItem = videoItems[videoItems.length - 1];
       const nextCursor = hasMore && lastItem
         ? { id: lastItem.id, createdAt: lastItem.createdAt }
         : null;
 
       return {
-        items,
+        videos: videoItems,
+        channels: channelResults,
         nextCursor,
       };
     }),

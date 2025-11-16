@@ -125,7 +125,7 @@
 - ❌ Iniciar transmisión desde OBS
 - ❌ Verificar que el video se reproduce en la aplicación
 
-**Guía:** Ver `GUIA_COMPLETA_MUX_LIVE_STREAMING.md`
+**Nota:** Mux Live Streaming ya está implementado. Ver código en `src/modules/live/`
 
 **Tiempo estimado:** 30 minutos
 
@@ -145,7 +145,7 @@
 2. ❌ **Habilitar Live Streaming en Mux Dashboard**
    - Activar los $20 de créditos de prueba
    - **Tiempo:** 5 minutos
-   - **Guía:** `HABILITAR_CREDITOS_MUX.md`
+   - **Nota:** Ver configuración en Mux Dashboard
 
 ### 🟡 IMPORTANTE (Mejora funcionalidad)
 

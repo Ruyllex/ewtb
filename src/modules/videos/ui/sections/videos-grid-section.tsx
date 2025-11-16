@@ -124,6 +124,7 @@ const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
             previewUrl={video.previewUrl}
             duration={video.duration || 0}
             userName={video.userName}
+            userUsername={video.userUsername}
             userImageUrl={video.userImageUrl}
             createdAt={video.createdAt}
           />
