@@ -79,7 +79,7 @@ Si alguno de estos coincide con los valores en `ADMIN_USER_IDS`, el usuario ser√
 ```env
 # ... otras variables ...
 
-# Administradores
+# Administradoress
 ADMIN_USER_IDS=fc64dcc6-d4f5-4493-89f4-97f6ed7000e6
 ```
 
