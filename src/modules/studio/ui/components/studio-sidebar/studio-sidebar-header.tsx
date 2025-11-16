@@ -2,7 +2,6 @@ import { SidebarHeader, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/user-avatar";
 import { useUser } from "@clerk/nextjs";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 export const StudioSidebarHeader = () => {
@@ -38,14 +37,17 @@ export const StudioSidebarHeader = () => {
 
   return (
     <SidebarHeader className="flex items-center justify-center pb-4 ">
-      <Link href={"/users/current"} prefetch>
+      <div 
+        onClick={() => router.push("/users/current")}
+        className="cursor-pointer"
+      >
         <UserAvatar
           imageUrl={user?.imageUrl}
           name={user?.fullName ?? "User"}
           className="size-[112px] hover:opacity-80 transition-opacity"
           size="xl"
         />
-      </Link>
+      </div>
       <div className="flex flex-col items-center mt-2 gap-y-1">
         <p className="text-sm  font-medium">Your Profile</p>
         <p className="text-xs text-muted-foreground">{user.fullName}</p>
