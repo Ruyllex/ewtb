@@ -1,17 +1,26 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { ClapperboardIcon, LoaderIcon, UserCircleIcon } from "lucide-react";
+import { ClapperboardIcon, LoaderIcon, UserCircleIcon, ShieldCheckIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 
 import { ClerkLoading, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { useTRPC } from "@/trpc/client";
+import { useQuery } from "@tanstack/react-query";
 
 export const AuthButton = () => {
   const [mounted, setMounted] = useState(false);
+  const trpc = useTRPC();
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Verificar si el usuario es admin
+  const { data: isAdmin } = useQuery({
+    ...trpc.users.isAdmin.queryOptions(),
+    enabled: mounted,
+  });
 
   // Renderizar un placeholder durante SSR para evitar errores de hidratación
   if (!mounted) {
@@ -34,6 +43,13 @@ export const AuthButton = () => {
           <UserButton.MenuItems>
             {/* Todo: Add user profile menu button */}
             <UserButton.Link href="/studio" label="Studio" labelIcon={<ClapperboardIcon className="size-4" />} />
+            {isAdmin && (
+              <UserButton.Link 
+                href="/admin" 
+                label="Dashboard Admin" 
+                labelIcon={<ShieldCheckIcon className="size-4" />} 
+              />
+            )}
             <UserButton.Action label="manageAccount" />
           </UserButton.MenuItems>
         </UserButton>

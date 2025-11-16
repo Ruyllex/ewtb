@@ -24,6 +24,7 @@ export const users = pgTable(
     stripeAccountStatus: text("stripe_account_status"), // pending, active, restricted, etc.
     canMonetize: boolean("can_monetize").default(false).notNull(), // Flag para habilitar monetización
     dateOfBirth: timestamp("date_of_birth"), // Para verificar edad mínima
+    isAdmin: boolean("is_admin").default(false).notNull(), // Flag para identificar administradores
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

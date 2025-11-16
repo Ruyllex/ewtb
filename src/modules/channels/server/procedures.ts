@@ -7,10 +7,17 @@ import z from "zod";
 
 /**
  * Verificar si un usuario es admin
- * Los admins se definen en la variable de entorno ADMIN_USER_IDS (separados por comas)
- * Puede contener: IDs de usuario (UUID), Clerk IDs, o emails
+ * Primero verifica la columna isAdmin en la base de datos, luego la variable de entorno
  */
 async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<boolean> {
+  // Primero verificar la columna isAdmin en la base de datos
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  
+  if (user?.isAdmin) {
+    return true;
+  }
+
+  // Si no está marcado como admin en la BD, verificar variable de entorno (retrocompatibilidad)
   const adminUserIds = process.env.ADMIN_USER_IDS?.split(",").map((id) => id.trim()) || [];
   
   // Verificar por ID de usuario o Clerk ID
@@ -105,6 +112,15 @@ export const channelsRouter = createTRPCRouter({
       throw new TRPCError({ code: "NOT_FOUND", message: "Canal no encontrado" });
     }
 
+    // Obtener información del usuario (incluyendo username)
+    const [user] = await db
+      .select({
+        username: users.username,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
     // Obtener contador de suscriptores
     const [subscriberCount] = await db
       .select({ count: sql<number>`count(*)` })
@@ -113,6 +129,7 @@ export const channelsRouter = createTRPCRouter({
 
     return {
       ...channel,
+      username: user?.username || null,
       subscriberCount: Number(subscriberCount?.count || 0),
     };
   }),
@@ -249,7 +266,13 @@ export const channelsRouter = createTRPCRouter({
           });
         }
 
-        await db.update(users).set({ username: input.username }).where(eq(users.id, userId));
+        await db
+          .update(users)
+          .set({ 
+            username: input.username,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userId));
       }
 
       const [updatedChannel] = await db
@@ -516,6 +539,75 @@ export const channelsRouter = createTRPCRouter({
         .returning();
 
       return updatedChannel;
+    }),
+
+  /**
+   * Obtiene todos los canales (solo admin) - Para dashboard administrativo
+   */
+  getAll: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(50),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Verificar si el usuario es admin
+      const isAdmin = await isUserAdmin(userId, ctx.clerkUserId || null);
+
+      if (!isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Solo los administradores pueden acceder a esta información",
+        });
+      }
+
+      const whereConditions = [
+        input.cursor
+          ? sql`(${channels.createdAt} < ${input.cursor.createdAt} OR (${channels.createdAt} = ${input.cursor.createdAt} AND ${channels.id} < ${input.cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          description: channels.description,
+          avatar: channels.avatar,
+          banner: channels.banner,
+          isVerified: channels.isVerified,
+          createdAt: channels.createdAt,
+          updatedAt: channels.updatedAt,
+          userId: channels.userId,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+        })
+        .from(channels)
+        .innerJoin(users, eq(channels.userId, users.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
+        .orderBy(desc(channels.createdAt), desc(channels.id))
+        .limit(input.limit + 1);
+
+      const hasMore = results.length > input.limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
     }),
 });
 

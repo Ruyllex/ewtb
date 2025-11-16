@@ -4,6 +4,7 @@ import { useTRPC } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { THUMBNAIL_FALLBACK } from "../../constants";
@@ -54,6 +55,7 @@ export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
 
 const SearchResultsSuspense = ({ query }: { query: string }) => {
   const trpc = useTRPC();
+  const router = useRouter();
   const { data } = useSuspenseQuery(trpc.videos.search.queryOptions({ query, limit: 20 }));
 
   const hasVideos = data.videos && data.videos.length > 0;
@@ -141,13 +143,16 @@ const SearchResultsSuspense = ({ query }: { query: string }) => {
                   <h3 className="text-lg font-semibold line-clamp-2 mb-2">{video.title}</h3>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                     {video.userUsername ? (
-                      <Link
-                        href={`/channel/${video.userUsername}`}
-                        className="hover:text-foreground transition-colors"
-                        onClick={(e) => e.stopPropagation()}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          router.push(`/channel/${video.userUsername}`);
+                        }}
+                        className="hover:text-foreground transition-colors text-left"
                       >
                         {video.userName}
-                      </Link>
+                      </button>
                     ) : (
                       <span>{video.userName}</span>
                     )}

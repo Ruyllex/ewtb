@@ -1,7 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isProtectedRoute = createRouteMatcher(["/studio(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/studio(.*)", "/admin(.*)"]);
 const isPublicRoute = createRouteMatcher([
   "/api/videos/webhook",
   "/api/users/webhook",

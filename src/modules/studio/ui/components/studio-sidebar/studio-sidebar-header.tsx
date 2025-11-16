@@ -3,10 +3,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/user-avatar";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export const StudioSidebarHeader = () => {
   const { user } = useUser();
   const { state } = useSidebar();
+  const router = useRouter();
 
   if (!user)
     return (
@@ -22,11 +24,13 @@ export const StudioSidebarHeader = () => {
   if (state === "collapsed") {
     return (
       <SidebarMenuItem>
-        <SidebarMenuButton tooltip={"Your Profile"} asChild>
-          <Link href={"/users/current"} prefetch>
-            <UserAvatar imageUrl={user?.imageUrl} name={user?.fullName ?? "User"} size={"xs"} />
-            <span className="text-sm">Your Profile</span>
-          </Link>
+        <SidebarMenuButton 
+          tooltip={"Your Profile"}
+          onClick={() => router.push("/users/current")}
+          className="flex items-center gap-2"
+        >
+          <UserAvatar imageUrl={user?.imageUrl} name={user?.fullName ?? "User"} size={"xs"} />
+          <span className="text-sm">Your Profile</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );

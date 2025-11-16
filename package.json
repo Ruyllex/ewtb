@@ -14,6 +14,7 @@
     "seed": "bun ./src/scripts/seed-categories.ts",
     "seed:video": "bun ./src/scripts/seed-test-video.ts",
     "ensure:channels": "tsx ./src/scripts/ensure-channels.ts",
+    "sync:admins": "tsx ./src/scripts/sync-admin-users.ts",
     "verify:mux-live": "tsx scripts/verify-mux-live.ts",
     "verify:sentry": "tsx scripts/verify-sentry-config.ts",
     "verify:logtail": "tsx scripts/verify-logtail-config.ts"

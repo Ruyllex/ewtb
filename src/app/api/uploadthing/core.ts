@@ -50,15 +50,31 @@ export const ourFileRouter = {
       return { user, ...input };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      await db
-        .update(videos)
-        .set({
-          thumbnailUrl: file.ufsUrl,
-          thumbnailKey: file.key,
-        })
-        .where(and(eq(videos.id, metadata.videoId), eq(videos.userId, metadata.user.id)));
+      try {
+        // En UploadThing v7, la propiedad es 'url'
+        const fileUrl = file.url;
+        
+        if (!fileUrl) {
+          console.error("File URL not found. File object keys:", Object.keys(file));
+          throw new UploadThingError("File URL not available");
+        }
 
-      return { uploadedBy: metadata.user.id };
+        await db
+          .update(videos)
+          .set({
+            thumbnailUrl: fileUrl,
+            thumbnailKey: file.key,
+          })
+          .where(and(eq(videos.id, metadata.videoId), eq(videos.userId, metadata.user.id)));
+
+        return { uploadedBy: String(metadata.user.id) };
+      } catch (error) {
+        console.error("Error updating video thumbnail:", error);
+        if (error instanceof UploadThingError) {
+          throw error;
+        }
+        throw new UploadThingError("Failed to update video thumbnail");
+      }
     }),
 
   channelAvatarUploader: f({
@@ -86,23 +102,52 @@ export const ourFileRouter = {
 
       // Si hay un avatar anterior, eliminarlo
       if (channel.avatarKey) {
-        const utapi = new UTApi();
-        await utapi.deleteFiles(channel.avatarKey);
+        try {
+          const utapi = new UTApi();
+          await utapi.deleteFiles(channel.avatarKey);
+        } catch (error) {
+          // Si falla la eliminación, continuar de todas formas
+          console.error("Error deleting old avatar:", error);
+        }
       }
 
-      return { user, channel };
+      return { 
+        userId: user.id,
+        channelId: channel.id
+      };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      await db
-        .update(channels)
-        .set({
-          avatar: file.ufsUrl,
-          avatarKey: file.key,
-          updatedAt: new Date(),
-        })
-        .where(eq(channels.id, metadata.channel.id));
+      // UploadThing v7 puede usar 'url' o 'ufsUrl'
+      const fileUrl = (file as any).url || (file as any).ufsUrl;
+      
+      if (!fileUrl) {
+        console.error("File URL not found. File object:", JSON.stringify(file, null, 2));
+        throw new UploadThingError("File URL not available");
+      }
 
-      return { uploadedBy: metadata.user.id };
+      if (!file.key) {
+        console.error("File key not found. File object:", JSON.stringify(file, null, 2));
+        throw new UploadThingError("File key not available");
+      }
+
+      try {
+        await db
+          .update(channels)
+          .set({
+            avatar: fileUrl,
+            avatarKey: file.key,
+            updatedAt: new Date(),
+          })
+          .where(eq(channels.id, metadata.channelId));
+      } catch (dbError) {
+        console.error("Database error updating channel avatar:", dbError);
+        throw new UploadThingError("Failed to update channel avatar in database");
+      }
+
+      // Devolver un objeto simple y serializable
+      return { 
+        uploadedBy: String(metadata.userId)
+      };
     }),
 
   channelBannerUploader: f({
@@ -130,23 +175,52 @@ export const ourFileRouter = {
 
       // Si hay un banner anterior, eliminarlo
       if (channel.bannerKey) {
-        const utapi = new UTApi();
-        await utapi.deleteFiles(channel.bannerKey);
+        try {
+          const utapi = new UTApi();
+          await utapi.deleteFiles(channel.bannerKey);
+        } catch (error) {
+          // Si falla la eliminación, continuar de todas formas
+          console.error("Error deleting old banner:", error);
+        }
       }
 
-      return { user, channel };
+      return { 
+        userId: user.id,
+        channelId: channel.id
+      };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      await db
-        .update(channels)
-        .set({
-          banner: file.ufsUrl,
-          bannerKey: file.key,
-          updatedAt: new Date(),
-        })
-        .where(eq(channels.id, metadata.channel.id));
+      // UploadThing v7 puede usar 'url' o 'ufsUrl'
+      const fileUrl = (file as any).url || (file as any).ufsUrl;
+      
+      if (!fileUrl) {
+        console.error("File URL not found. File object:", JSON.stringify(file, null, 2));
+        throw new UploadThingError("File URL not available");
+      }
 
-      return { uploadedBy: metadata.user.id };
+      if (!file.key) {
+        console.error("File key not found. File object:", JSON.stringify(file, null, 2));
+        throw new UploadThingError("File key not available");
+      }
+
+      try {
+        await db
+          .update(channels)
+          .set({
+            banner: fileUrl,
+            bannerKey: file.key,
+            updatedAt: new Date(),
+          })
+          .where(eq(channels.id, metadata.channelId));
+      } catch (dbError) {
+        console.error("Database error updating channel banner:", dbError);
+        throw new UploadThingError("Failed to update channel banner in database");
+      }
+
+      // Devolver un objeto simple y serializable
+      return { 
+        uploadedBy: String(metadata.userId)
+      };
     }),
 } satisfies FileRouter;
 

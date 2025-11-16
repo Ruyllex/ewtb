@@ -55,7 +55,54 @@ async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons:
   };
 }
 
+/**
+ * Verificar si un usuario es admin (helper function)
+ * Primero verifica la columna isAdmin en la base de datos, luego la variable de entorno
+ */
+async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<boolean> {
+  // Primero verificar la columna isAdmin en la base de datos
+  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  
+  if (user?.isAdmin) {
+    return true;
+  }
+
+  // Si no está marcado como admin en la BD, verificar variable de entorno (retrocompatibilidad)
+  const adminUserIds = process.env.ADMIN_USER_IDS?.split(",").map((id) => id.trim()) || [];
+  
+  // Verificar por ID de usuario o Clerk ID
+  const isAdmin = 
+    adminUserIds.includes(userId) || 
+    (clerkUserId && adminUserIds.includes(clerkUserId));
+
+  // Si no se encontró por ID, verificar por email (si está en la lista)
+  if (!isAdmin && clerkUserId) {
+    try {
+      const { clerkClient } = await import("@clerk/nextjs/server");
+      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      if (clerkUser?.emailAddresses?.[0]?.emailAddress) {
+        const userEmail = clerkUser.emailAddresses[0].emailAddress;
+        if (adminUserIds.includes(userEmail)) {
+          return true;
+        }
+      }
+    } catch {
+      // Si no se puede obtener el email, continuar sin él
+    }
+  }
+
+  return isAdmin;
+}
+
 export const usersRouter = createTRPCRouter({
+  /**
+   * Verifica si el usuario actual es administrador
+   */
+  isAdmin: protectedProcedure.query(async ({ ctx }) => {
+    const { id: userId } = ctx.user;
+    return await isUserAdmin(userId, ctx.clerkUserId || null);
+  }),
+
   /**
    * Obtiene el perfil del usuario actual
    */
