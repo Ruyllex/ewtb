@@ -53,7 +53,7 @@ const VideosGridSectionSuspense = ({ categoryId }: VideosGridSectionProps) => {
     setMounted(true);
   }, []);
 
-  // Si no está montado, mostrar skeleton (esto evita que useTRPC se llame antes de que el provider esté disponible)
+  // Si no está montado, mostrar skeleton
   if (!mounted) {
     return <VideosGridSkeleton />;
   }
@@ -114,21 +114,37 @@ const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {videos.map((video) => (
-          <VideoCard
-            key={video.id}
-            id={video.id}
-            title={video.title}
-            description={video.description}
-            thumbnailUrl={video.thumbnailUrl}
-            previewUrl={video.previewUrl}
-            duration={video.duration || 0}
-            userName={video.userName}
-            userUsername={video.userUsername}
-            userImageUrl={video.userImageUrl}
-            createdAt={video.createdAt}
-          />
-        ))}
+        {videos.map((video) => {
+          // Lógica unificada para el objeto channel (igual que en ChannelVideos)
+          const channelProp = (video as any).channel
+            ? {
+                username: (video as any).channel.username ?? "",
+                name: (video as any).channel.name ?? "",
+                avatarUrl: (video as any).channel.avatarUrl ?? null,
+              }
+            : {
+                // Fallback a propiedades planas (Legacy)
+                username: (video as any).userUsername ?? "",
+                name: (video as any).userName ?? (video as any).uploaderName ?? "",
+                avatarUrl: (video as any).userImageUrl ?? (video as any).avatar ?? null,
+              };
+
+          return (
+            <VideoCard
+              key={video.id}
+              id={video.id}
+              title={video.title}
+              description={video.description}
+              thumbnailUrl={video.thumbnailUrl}
+              previewUrl={video.previewUrl}
+              duration={video.duration || 0}
+              createdAt={video.createdAt}
+              // ✅ Pasamos SOLO la prop 'channel'
+              channel={channelProp}
+              // OBSOLETO: Se eliminan las props legacy
+            />
+          );
+        })}
       </div>
       <InfiniteScroll
         isManual
@@ -139,4 +155,3 @@ const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
     </>
   );
 };
-

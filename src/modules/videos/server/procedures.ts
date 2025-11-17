@@ -16,6 +16,40 @@ const ensureMuxCredentials = () => {
   }
 };
 
+/**
+ * Normaliza avatares para que Next/Image los pueda consumir:
+ * - Si es URL absoluta (http(s)) la devuelve
+ * - Si parece una key de UploadThing la convierte a https://utfs.io/f/{key}
+ * - Si contiene utfs.io o img.clerk.com y falta protocolo, lo agrega
+ * - Si no, devuelve el valor tal cual (puede ser null)
+ */
+function normalizeAvatar(avatar?: string | null, fallback?: string | null): string | null {
+  const src = (avatar ?? fallback) ?? null;
+  if (!src) return null;
+
+  // Absoluta
+  if (/^https?:\/\//i.test(src)) return src;
+
+  // UploadThing key-like (heurística)
+  const keyRegex = /^[A-Za-z0-9_\-]{8,}$/;
+  if (keyRegex.test(src)) {
+    return `https://utfs.io/f/${src}`;
+  }
+
+  // utfs.io parcial (sin protocolo)
+  if (src.includes("utfs.io")) {
+    return src.startsWith("http") ? src : `https://${src.replace(/^\/+/, "")}`;
+  }
+
+  // Clerk proxy parcial (img.clerk.com)
+  if (src.includes("img.clerk.com")) {
+    return src.startsWith("http") ? src : `https://${src.replace(/^\/+/, "")}`;
+  }
+
+  // Fallback: devolver tal cual (por si ya es algo que funcione)
+  return src;
+}
+
 export const videosRouter = createTRPCRouter({
   restoreThumbnail: protectedProcedure
     .input(z.object({ id: z.uuid() }))
@@ -69,6 +103,7 @@ export const videosRouter = createTRPCRouter({
 
     return removeVideo;
   }),
+
   update: protectedProcedure.input(videoUpdateSchema).mutation(async ({ ctx, input }) => {
     const { id: userId } = ctx.user;
 
@@ -94,6 +129,7 @@ export const videosRouter = createTRPCRouter({
 
     return updatedVideo;
   }),
+
   create: protectedProcedure.mutation(async ({ ctx }) => {
     const { id: userId } = ctx.user;
 
@@ -156,7 +192,7 @@ export const videosRouter = createTRPCRouter({
       // Verificar que el upload existe y obtener el asset
       try {
         const upload = await mux.video.uploads.retrieve(input.uploadId);
-        
+
         if (!upload.asset_id) {
           throw new TRPCError({
             code: "BAD_REQUEST",
@@ -287,6 +323,7 @@ export const videosRouter = createTRPCRouter({
           : undefined,
       ].filter(Boolean);
 
+      // Ahora hacemos join con users y channels para devolver info de canal junto al video
       const results = await db
         .select({
           id: videos.id,
@@ -297,13 +334,20 @@ export const videosRouter = createTRPCRouter({
           muxPlaybackId: videos.muxPlaybackId,
           duration: videos.duration,
           createdAt: videos.createdAt,
-          userId: videos.userId,
+
+          // Usuario (owner)
+          userId: users.id,
           userName: users.name,
           userUsername: users.username,
           userImageUrl: users.imageUrl,
+
+          // Channel (desde tabla channels)
+          channelName: channels.name,
+          channelAvatar: channels.avatar,
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id))
+        .innerJoin(channels, eq(channels.userId, users.id))
         .where(and(...whereConditions))
         .orderBy(desc(videos.createdAt), desc(videos.id))
         .limit(limit + 1);
@@ -311,13 +355,23 @@ export const videosRouter = createTRPCRouter({
       const hasMore = results.length > limit;
       const items = hasMore ? results.slice(0, -1) : results;
 
+      // Normalizar y construir objeto channel en cada item
+      const normalized = items.map((item) => ({
+        ...item,
+        channel: {
+          username: item.userUsername ?? null, // username del owner (guardado en users.username)
+          name: item.channelName ?? null,
+          avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
+        },
+      }));
+
       const lastItem = items[items.length - 1];
       const nextCursor = hasMore && lastItem
         ? { id: lastItem.id, createdAt: lastItem.createdAt }
         : null;
 
       return {
-        items,
+        items: normalized,
         nextCursor,
       };
     }),
@@ -338,13 +392,20 @@ export const videosRouter = createTRPCRouter({
           updatedAt: videos.updatedAt,
           userId: videos.userId,
           categoryId: videos.categoryId,
+
+          // User
           userName: users.name,
           userUsername: users.username,
           userImageUrl: users.imageUrl,
           userCanMonetize: users.canMonetize,
+
+          // Channel
+          channelName: channels.name,
+          channelAvatar: channels.avatar,
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id))
+        .innerJoin(channels, eq(channels.userId, users.id))
         .where(and(eq(videos.id, input.id), eq(videos.visibility, "public")))
         .limit(1);
 
@@ -362,7 +423,6 @@ export const videosRouter = createTRPCRouter({
 
         viewCount = viewCountResult[0]?.count ?? 0;
       } catch (error) {
-        // Si la tabla views no existe o hay un error, simplemente usar 0
         console.warn("Error getting view count (table may not exist):", error);
         viewCount = 0;
       }
@@ -370,6 +430,11 @@ export const videosRouter = createTRPCRouter({
       return {
         ...video,
         viewCount,
+        channel: {
+          username: video.userUsername ?? null,
+          name: video.channelName ?? null,
+          avatarUrl: normalizeAvatar(video.channelAvatar ?? null, video.userImageUrl ?? null),
+        },
       };
     }),
 
