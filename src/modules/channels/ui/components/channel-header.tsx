@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useTRPC } from "@/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Bell, BellOff } from "lucide-react";
+import { Check, Bell, BellOff } from "lucide-react"; // 👈 Se cambió CheckCircle2 por Check
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { UploadButton } from "@/lib/uploadthing";
@@ -188,7 +188,10 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold">{channel.name}</h1>
                 {channel.isVerified && (
-                  <CheckCircle2 className="h-6 w-6 text-blue-500 fill-blue-500" />
+                  // 👇 CAMBIO: Usando Check
+                  <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                  <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                </div>
                 )}
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -230,4 +233,3 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
     </div>
   );
 };
-
