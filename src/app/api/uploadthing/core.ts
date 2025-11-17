@@ -190,37 +190,65 @@ export const ourFileRouter = {
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // UploadThing v7 puede usar 'url' o 'ufsUrl'
-      const fileUrl = (file as any).url || (file as any).ufsUrl;
-      
-      if (!fileUrl) {
-        console.error("File URL not found. File object:", JSON.stringify(file, null, 2));
-        throw new UploadThingError("File URL not available");
-      }
-
-      if (!file.key) {
-        console.error("File key not found. File object:", JSON.stringify(file, null, 2));
-        throw new UploadThingError("File key not available");
-      }
-
       try {
-        await db
+        console.log("Banner upload complete - File object:", {
+          key: file.key,
+          name: file.name,
+          size: file.size,
+          url: (file as any).url,
+          ufsUrl: (file as any).ufsUrl,
+          allKeys: Object.keys(file),
+        });
+
+        // En UploadThing v7, la propiedad es directamente 'url' en el objeto file
+        // Verificar todas las posibles propiedades
+        const fileUrl = (file as any).url || (file as any).ufsUrl || (file as any).serverUrl || (file as any).fileUrl;
+        
+        if (!fileUrl) {
+          const errorMsg = `File URL not found. Available keys: ${Object.keys(file).join(", ")}`;
+          console.error(errorMsg);
+          console.error("Full file object:", JSON.stringify(file, null, 2));
+          throw new UploadThingError("File URL not available");
+        }
+
+        if (!file.key) {
+          console.error("File key not found. File object:", JSON.stringify(file, null, 2));
+          throw new UploadThingError("File key not available");
+        }
+
+        console.log("Updating channel banner in database:", {
+          channelId: metadata.channelId,
+          fileUrl,
+          fileKey: file.key,
+        });
+
+        const result = await db
           .update(channels)
           .set({
             banner: fileUrl,
             bannerKey: file.key,
             updatedAt: new Date(),
           })
-          .where(eq(channels.id, metadata.channelId));
-      } catch (dbError) {
-        console.error("Database error updating channel banner:", dbError);
-        throw new UploadThingError("Failed to update channel banner in database");
-      }
+          .where(eq(channels.id, metadata.channelId))
+          .returning();
 
-      // Devolver un objeto simple y serializable
-      return { 
-        uploadedBy: String(metadata.userId)
-      };
+        if (!result || result.length === 0) {
+          throw new Error("No channel was updated");
+        }
+
+        console.log("Channel banner updated successfully:", result[0]);
+
+        // Devolver un objeto simple y serializable
+        return { 
+          uploadedBy: String(metadata.userId)
+        };
+      } catch (error) {
+        console.error("Error in banner upload complete:", error);
+        if (error instanceof UploadThingError) {
+          throw error;
+        }
+        throw new UploadThingError(`Failed to process banner upload: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }),
 } satisfies FileRouter;
 
