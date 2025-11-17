@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
+import { CommentsSection } from "@/modules/comments/ui/components/comments-section";
 
 interface VideoViewProps {
   videoId: string;
@@ -220,6 +221,9 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                 <p className="text-sm whitespace-pre-wrap">{video.description}</p>
               </div>
             )}
+
+            {/* Comments Section */}
+            <CommentsSection videoId={videoId} />
           </div>
         </div>
 

@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { videos, videoUpdateSchema, views, users, channels } from "@/db/schema";
+import { videos, videoUpdateSchema, views, users, channels, subscriptions } from "@/db/schema";
 import { mux } from "@/lib/mux";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, ilike, sql, desc, or } from "drizzle-orm";
+import { and, eq, ilike, sql, desc, or, inArray } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import z from "zod";
 
@@ -577,5 +577,103 @@ export const videosRouter = createTRPCRouter({
         console.warn("Error in recordView:", error);
         return { success: true, skipped: true };
       }
+    }),
+
+  /**
+   * Obtener feed personal (videos de canales suscritos)
+   */
+  getPersonalFeed: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+      const { limit, cursor } = input;
+
+      // Obtener IDs de canales a los que el usuario está suscrito
+      const userSubscriptions = await db
+        .select({ channelId: subscriptions.channelId })
+        .from(subscriptions)
+        .where(eq(subscriptions.subscriberId, userId));
+
+      const subscribedChannelIds = userSubscriptions.map((sub) => sub.channelId);
+
+      // Si no está suscrito a ningún canal, retornar lista vacía
+      if (subscribedChannelIds.length === 0) {
+        return {
+          items: [],
+          nextCursor: null,
+        };
+      }
+
+      // Obtener los user IDs de los canales suscritos
+      const subscribedChannels = await db
+        .select({ userId: channels.userId })
+        .from(channels)
+        .where(inArray(channels.id, subscribedChannelIds));
+
+      const subscribedUserIds = subscribedChannels.map((ch) => ch.userId);
+
+      const whereConditions = [
+        eq(videos.visibility, "public"),
+        inArray(videos.userId, subscribedUserIds),
+        cursor
+          ? sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: videos.id,
+          title: videos.title,
+          description: videos.description,
+          thumbnailUrl: videos.thumbnailUrl,
+          previewUrl: videos.previewUrl,
+          muxPlaybackId: videos.muxPlaybackId,
+          duration: videos.duration,
+          createdAt: videos.createdAt,
+          userId: users.id,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+          channelName: channels.name,
+          channelAvatar: channels.avatar,
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id))
+        .innerJoin(channels, eq(channels.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(videos.createdAt), desc(videos.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const normalized = items.map((item) => ({
+        ...item,
+        channel: {
+          username: item.userUsername ?? null,
+          name: item.channelName ?? null,
+          avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
+        },
+      }));
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items: normalized,
+        nextCursor,
+      };
     }),
 });

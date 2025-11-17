@@ -50,6 +50,7 @@ export const userRelations = relations(users, ({ many, one }) => ({
     relationName: "channel",
   }),
   liveStreams: many(liveStreams),
+  comments: many(comments),
 }));
 
 export const categories = pgTable(
@@ -111,6 +112,7 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
     references: [categories.id],
   }),
   views: many(views),
+  comments: many(comments),
 }));
 
 export const views = pgTable("views", {
@@ -132,6 +134,26 @@ export const viewRelations = relations(views, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// Tabla de comentarios
+export const comments = pgTable("comments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  videoId: uuid("video_id")
+    .references(() => videos.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  texto: text("texto").notNull(),
+  fecha: timestamp("fecha").defaultNow().notNull(),
+  parentId: uuid("parent_id"), // ID del comentario padre (si es una respuesta) - referencia manual para evitar circular
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const commentInsertSchema = createInsertSchema(comments);
+export const commentSelectSchema = createSelectSchema(comments);
+export const commentUpdateSchema = createUpdateSchema(comments);
 
 export const liveStreams = pgTable("live_streams", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -299,5 +321,24 @@ export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
     fields: [subscriptions.channelId],
     references: [channels.id],
     relationName: "channel",
+  }),
+}));
+
+export const commentRelations = relations(comments, ({ one, many }) => ({
+  video: one(videos, {
+    fields: [comments.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [comments.userId],
+    references: [users.id],
+  }),
+  parent: one(comments, {
+    fields: [comments.parentId],
+    references: [comments.id],
+    relationName: "replies",
+  }),
+  replies: many(comments, {
+    relationName: "replies",
   }),
 }));

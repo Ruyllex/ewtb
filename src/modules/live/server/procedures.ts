@@ -1,9 +1,9 @@
 import { db } from "@/db";
-import { liveStreams } from "@/db/schema";
+import { liveStreams, subscriptions, channels, users } from "@/db/schema";
 import { mux } from "@/lib/mux";
-import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
+import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, inArray } from "drizzle-orm";
 import z from "zod";
 
 const ensureMuxCredentials = () => {
@@ -292,6 +292,148 @@ export const liveRouter = createTRPCRouter({
           message: "Unable to get live stream status",
         });
       }
+    }),
+
+  /**
+   * Obtener todos los streams públicos (feed global)
+   */
+  getPublicStreams: baseProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { limit, cursor } = input;
+
+      const whereConditions = [
+        eq(liveStreams.status, "active"), // Solo streams activos
+        cursor
+          ? sql`(${liveStreams.createdAt} < ${cursor.createdAt} OR (${liveStreams.createdAt} = ${cursor.createdAt} AND ${liveStreams.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: liveStreams.id,
+          title: liveStreams.title,
+          description: liveStreams.description,
+          playbackId: liveStreams.playbackId,
+          status: liveStreams.status,
+          createdAt: liveStreams.createdAt,
+          userId: users.id,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+        })
+        .from(liveStreams)
+        .innerJoin(users, eq(liveStreams.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(liveStreams.createdAt), desc(liveStreams.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
+    }),
+
+  /**
+   * Obtener streams de canales suscritos (feed personal)
+   */
+  getPersonalFeed: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            createdAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+      const { limit, cursor } = input;
+
+      // Obtener IDs de canales a los que el usuario está suscrito
+      const userSubscriptions = await db
+        .select({ channelId: subscriptions.channelId })
+        .from(subscriptions)
+        .where(eq(subscriptions.subscriberId, userId));
+
+      const subscribedChannelIds = userSubscriptions.map((sub) => sub.channelId);
+
+      // Si no está suscrito a ningún canal, retornar lista vacía
+      if (subscribedChannelIds.length === 0) {
+        return {
+          items: [],
+          nextCursor: null,
+        };
+      }
+
+      // Obtener los user IDs de los canales suscritos
+      const subscribedChannels = await db
+        .select({ userId: channels.userId })
+        .from(channels)
+        .where(inArray(channels.id, subscribedChannelIds));
+
+      const subscribedUserIds = subscribedChannels.map((ch) => ch.userId);
+
+      const whereConditions = [
+        eq(liveStreams.status, "active"),
+        inArray(liveStreams.userId, subscribedUserIds),
+        cursor
+          ? sql`(${liveStreams.createdAt} < ${cursor.createdAt} OR (${liveStreams.createdAt} = ${cursor.createdAt} AND ${liveStreams.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: liveStreams.id,
+          title: liveStreams.title,
+          description: liveStreams.description,
+          playbackId: liveStreams.playbackId,
+          status: liveStreams.status,
+          createdAt: liveStreams.createdAt,
+          userId: users.id,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+        })
+        .from(liveStreams)
+        .innerJoin(users, eq(liveStreams.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(liveStreams.createdAt), desc(liveStreams.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, createdAt: lastItem.createdAt }
+        : null;
+
+      return {
+        items,
+        nextCursor,
+      };
     }),
 });
 

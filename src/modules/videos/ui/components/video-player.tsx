@@ -6,6 +6,7 @@ interface VideoPlayerProps {
   thumbnailUrl?: string | null | undefined;
   autoPlay?: boolean;
   onPlay?: () => void;
+  streamType?: "on-demand" | "live" | "ll-live"; // Tipo de stream: VOD o en vivo
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -13,6 +14,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   thumbnailUrl,
   autoPlay,
   onPlay,
+  streamType = "on-demand", // Por defecto es VOD
 }) => {
   // Si no hay playbackId, mostrar un placeholder
   if (!playbackId) {
@@ -25,10 +27,15 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
+  // Para streams en vivo, usar streamType="live"
+  // Para VOD, no especificar streamType (o usar "on-demand")
+  const isLive = streamType === "live" || streamType === "ll-live";
+
   return (
     <MuxPlayer
       playbackId={playbackId}
-      poster={thumbnailUrl || THUMBNAIL_FALLBACK}
+      streamType={isLive ? streamType : undefined}
+      poster={!isLive ? (thumbnailUrl || THUMBNAIL_FALLBACK) : undefined}
       playerInitTime={0}
       autoPlay={autoPlay}
       className="w-full h-full object-contain"
