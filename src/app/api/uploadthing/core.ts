@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { users, videos, channels } from "@/db/schema";
-import { auth } from "@clerk/nextjs/server";
+import { getAuth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { createUploadthing, type FileRouter } from "uploadthing/next";
 import { UploadThingError, UTApi } from "uploadthing/server";
@@ -16,8 +16,9 @@ export const ourFileRouter = {
     },
   })
     .input(z.object({ videoId: z.uuid() }))
-    .middleware(async ({ input }) => {
-      const { userId: clerkUserId } = await auth();
+    .middleware(async ({ req, input }) => {
+      // getAuth espera el request en server/API contexts
+      const { userId: clerkUserId } = getAuth(req);
 
       if (!clerkUserId) throw new UploadThingError("Unauthorized");
       // Id del usuario de Clerk
@@ -36,7 +37,11 @@ export const ourFileRouter = {
 
       if (existingVideo.thumbnailKey) {
         const utapi = new UTApi();
-        await utapi.deleteFiles(existingVideo.thumbnailKey);
+        try {
+          await utapi.deleteFiles(existingVideo.thumbnailKey);
+        } catch (err) {
+          console.error("Failed deleting old thumbnail via UTApi:", err);
+        }
 
         await db
           .update(videos)
@@ -53,7 +58,7 @@ export const ourFileRouter = {
       try {
         // En UploadThing v7, la propiedad es 'url'
         const fileUrl = file.url;
-        
+
         if (!fileUrl) {
           console.error("File URL not found. File object keys:", Object.keys(file));
           throw new UploadThingError("File URL not available");
@@ -83,8 +88,8 @@ export const ourFileRouter = {
       maxFileCount: 1,
     },
   })
-    .middleware(async () => {
-      const { userId: clerkUserId } = await auth();
+    .middleware(async ({ req }) => {
+      const { userId: clerkUserId } = getAuth(req);
 
       if (!clerkUserId) throw new UploadThingError("Unauthorized");
 
@@ -104,22 +109,21 @@ export const ourFileRouter = {
       if (channel.avatarKey) {
         try {
           const utapi = new UTApi();
-          await utapi.deleteFiles(channel.avatarKey);
+          await utapi.deleteFiles(String(channel.avatarKey));
         } catch (error) {
-          // Si falla la eliminación, continuar de todas formas
           console.error("Error deleting old avatar:", error);
         }
       }
 
-      return { 
+      return {
         userId: user.id,
-        channelId: channel.id
+        channelId: channel.id,
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
-      // UploadThing v7 puede usar 'url' o 'ufsUrl'
-      const fileUrl = (file as any).url || (file as any).ufsUrl;
-      
+      // UploadThing v7 usa 'url' en el objeto file.
+      const fileUrl = file.url;
+
       if (!fileUrl) {
         console.error("File URL not found. File object:", JSON.stringify(file, null, 2));
         throw new UploadThingError("File URL not available");
@@ -144,9 +148,8 @@ export const ourFileRouter = {
         throw new UploadThingError("Failed to update channel avatar in database");
       }
 
-      // Devolver un objeto simple y serializable
-      return { 
-        uploadedBy: String(metadata.userId)
+      return {
+        uploadedBy: String(metadata.userId),
       };
     }),
 
@@ -156,8 +159,8 @@ export const ourFileRouter = {
       maxFileCount: 1,
     },
   })
-    .middleware(async () => {
-      const { userId: clerkUserId } = await auth();
+    .middleware(async ({ req }) => {
+      const { userId: clerkUserId } = getAuth(req);
 
       if (!clerkUserId) throw new UploadThingError("Unauthorized");
 
@@ -177,16 +180,15 @@ export const ourFileRouter = {
       if (channel.bannerKey) {
         try {
           const utapi = new UTApi();
-          await utapi.deleteFiles(channel.bannerKey);
+          await utapi.deleteFiles(String(channel.bannerKey));
         } catch (error) {
-          // Si falla la eliminación, continuar de todas formas
           console.error("Error deleting old banner:", error);
         }
       }
 
-      return { 
+      return {
         userId: user.id,
-        channelId: channel.id
+        channelId: channel.id,
       };
     })
     .onUploadComplete(async ({ metadata, file }) => {
@@ -195,15 +197,12 @@ export const ourFileRouter = {
           key: file.key,
           name: file.name,
           size: file.size,
-          url: (file as any).url,
-          ufsUrl: (file as any).ufsUrl,
+          url: file.url,
           allKeys: Object.keys(file),
         });
 
-        // En UploadThing v7, la propiedad es directamente 'url' en el objeto file
-        // Verificar todas las posibles propiedades
-        const fileUrl = (file as any).url || (file as any).ufsUrl || (file as any).serverUrl || (file as any).fileUrl;
-        
+        const fileUrl = file.url;
+
         if (!fileUrl) {
           const errorMsg = `File URL not found. Available keys: ${Object.keys(file).join(", ")}`;
           console.error(errorMsg);
@@ -238,9 +237,8 @@ export const ourFileRouter = {
 
         console.log("Channel banner updated successfully:", result[0]);
 
-        // Devolver un objeto simple y serializable
-        return { 
-          uploadedBy: String(metadata.userId)
+        return {
+          uploadedBy: String(metadata.userId),
         };
       } catch (error) {
         console.error("Error in banner upload complete:", error);

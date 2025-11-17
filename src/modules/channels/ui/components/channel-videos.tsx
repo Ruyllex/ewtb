@@ -78,21 +78,36 @@ export const ChannelVideos = ({ username }: ChannelVideosProps) => {
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {videos.map((video) => (
-          <VideoCard
-            key={video.id}
-            id={video.id}
-            title={video.title}
-            description={video.description}
-            thumbnailUrl={video.thumbnailUrl}
-            previewUrl={video.previewUrl}
-            duration={video.duration || 0}
-            userName={""} // No se muestra el nombre del usuario en la tarjeta del canal
-            userImageUrl={""} // No se muestra el avatar del usuario en la tarjeta del canal
-            createdAt={video.createdAt}
-          />
-        ))}
+        {videos.map((video) => {
+          // Defensive: video.channel puede no existir si el backend no lo devuelve.
+          // Intentamos buscar posibles campos planos que el backend pueda haber incluido.
+          const channelProp = video.channel
+            ? {
+                username: video.channel.username ?? "",
+                name: video.channel.name ?? "",
+                avatarUrl: video.channel.avatarUrl ?? null,
+              }
+            : {
+                username: (video as any).userUsername ?? "", // fallback si backend expone estos campos
+                name: (video as any).userName ?? (video as any).uploaderName ?? "",
+                avatarUrl: (video as any).userImageUrl ?? (video as any).avatar ?? null,
+              };
+
+          return (
+            <VideoCard
+              key={video.id}
+              id={video.id}
+              title={video.title}
+              thumbnailUrl={video.thumbnailUrl}
+              previewUrl={video.previewUrl}
+              duration={video.duration}
+              createdAt={video.createdAt}
+              channel={channelProp}
+            />
+          );
+        })}
       </div>
+
       <InfiniteScroll
         isManual
         hasNextPage={hasNextPage}
@@ -102,4 +117,3 @@ export const ChannelVideos = ({ username }: ChannelVideosProps) => {
     </>
   );
 };
-

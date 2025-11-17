@@ -358,75 +358,115 @@ export const channelsRouter = createTRPCRouter({
    * Si el usuario actual es el dueño del canal, muestra todos los videos (públicos, privados, etc.)
    * Si es otro usuario, solo muestra los videos públicos
    */
-  getVideos: baseProcedure
-    .input(
-      z.object({
-        username: z.string().min(1),
-        limit: z.number().min(1).max(50).default(20),
-        cursor: z
-          .object({
-            id: z.string().uuid(),
-            createdAt: z.date(),
-          })
-          .optional(),
-      })
-    )
-    .query(async ({ input, ctx }) => {
-      const [user] = await db
+getVideos: baseProcedure
+  .input(
+    z.object({
+      username: z.string().min(1),
+      limit: z.number().min(1).max(50).default(20),
+      cursor: z
+        .object({
+          id: z.string().uuid(),
+          createdAt: z.date(),
+        })
+        .optional(),
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    // obtener usuario (owner del canal)
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, input.username))
+      .limit(1);
+
+    if (!user) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Canal no encontrado" });
+    }
+
+    // determinar si el requester es el owner (para visibilidad)
+    let isOwner = false;
+    if (ctx.clerkUserId) {
+      const [currentUser] = await db
         .select()
         .from(users)
-        .where(eq(users.username, input.username))
+        .where(eq(users.clerkId, ctx.clerkUserId))
         .limit(1);
 
-      if (!user) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Canal no encontrado" });
+      if (currentUser && currentUser.id === user.id) {
+        isOwner = true;
       }
+    }
 
-      // Verificar si el usuario actual es el dueño del canal
-      let isOwner = false;
-      if (ctx.clerkUserId) {
-        const [currentUser] = await db
-          .select()
-          .from(users)
-          .where(eq(users.clerkId, ctx.clerkUserId))
-          .limit(1);
-        
-        if (currentUser && currentUser.id === user.id) {
-          isOwner = true;
-        }
-      }
+    // condiciones (paginación + visibilidad)
+    const whereConditions = [
+      eq(videos.userId, user.id),
+      !isOwner ? eq(videos.visibility, "public") : undefined,
+      input.cursor
+        ? sql`(${videos.createdAt} < ${input.cursor.createdAt} OR (${videos.createdAt} = ${input.cursor.createdAt} AND ${videos.id} < ${input.cursor.id}))`
+        : undefined,
+    ].filter(Boolean);
 
-      // Si es el dueño, mostrar todos los videos; si no, solo públicos
-      // Todos los usuarios (incluido el dueño) ven todos los videos públicos del canal
-      const whereConditions = [
-        eq(videos.userId, user.id),
-        // Si no es el dueño, solo mostrar públicos; si es el dueño, mostrar todos
-        !isOwner ? eq(videos.visibility, "public") : undefined,
-        input.cursor
-          ? sql`(${videos.createdAt} < ${input.cursor.createdAt} OR (${videos.createdAt} = ${input.cursor.createdAt} AND ${videos.id} < ${input.cursor.id}))`
-          : undefined,
-      ].filter(Boolean);
+    // SELECT: traemos campos del video + campos del canal y del usuario (para fallback)
+    const results = await db
+      .select({
+        id: videos.id,
+        title: videos.title,
+        description: videos.description,
+        thumbnailUrl: videos.thumbnailUrl,
+        previewUrl: videos.previewUrl,
+        duration: videos.duration,
+        visibility: videos.visibility,
+        userId: videos.userId,
+        createdAt: videos.createdAt,
+        updatedAt: videos.updatedAt,
+        // channel fields (pueden ser null si no hay fila en channels)
+        channelId: channels.id,
+        channelName: channels.name,
+        channelAvatar: channels.avatar,
+        // username / user fallback (from users table)
+        channelUsername: users.username,
+        channelUserImageUrl: users.imageUrl,
+      })
+      .from(videos)
+      .innerJoin(users, eq(videos.userId, users.id))
+      .leftJoin(channels, eq(channels.userId, users.id))
+      .where(whereConditions.length ? and(...(whereConditions as any)) : undefined)
+      .orderBy(desc(videos.createdAt), desc(videos.id))
+      .limit(input.limit + 1);
 
-      const results = await db
-        .select()
-        .from(videos)
-        .where(and(...whereConditions))
-        .orderBy(desc(videos.createdAt), desc(videos.id))
-        .limit(input.limit + 1);
+    const hasMore = results.length > input.limit;
+    const itemsRaw = hasMore ? results.slice(0, -1) : results;
 
-      const hasMore = results.length > input.limit;
-      const items = hasMore ? results.slice(0, -1) : results;
-
-      const lastItem = items[items.length - 1];
-      const nextCursor = hasMore && lastItem
-        ? { id: lastItem.id, createdAt: lastItem.createdAt }
-        : null;
-
+    // Mapear a la forma que espera el frontend: agregar channel object
+    const items = itemsRaw.map((r) => {
       return {
-        items,
-        nextCursor,
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        thumbnailUrl: r.thumbnailUrl,
+        previewUrl: r.previewUrl,
+        duration: r.duration,
+        visibility: r.visibility,
+        userId: r.userId,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+        channel: {
+          username: r.channelUsername ?? "", // username from users table
+          name: r.channelName ?? r.channelUsername ?? "", // prefer channels.name, fallback to username
+          avatarUrl: r.channelAvatar ?? r.channelUserImageUrl ?? null, // prefer channels.avatar, fallback users.imageUrl
+        },
       };
-    }),
+    });
+
+    const lastItem = items[items.length - 1];
+    const nextCursor =
+      hasMore && lastItem ? { id: lastItem.id, createdAt: lastItem.createdAt } : null;
+
+    return {
+      items,
+      nextCursor,
+    };
+  }),
 
   /**
    * Obtiene los streams activos de un canal
