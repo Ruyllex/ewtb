@@ -10,7 +10,7 @@ import { formatDuration } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
 import { Button } from "@/components/ui/button";
-import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2 } from "lucide-react";
+import { HeartIcon, CrownIcon, Bell, BellOff, Check } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { CommentsSection } from "@/modules/comments/ui/components/comments-section";
@@ -169,7 +169,9 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold cursor-pointer">{video.userName}</h3>
                       {channel?.isVerified && (
-                        <CheckCircle2 className="h-5 w-5 text-blue-500 fill-blue-500" />
+                        <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                        </div>
                       )}
                     </div>
                   </Link>

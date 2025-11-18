@@ -7,7 +7,7 @@ import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, ShieldCheckIcon, Users, Video, TrendingUp } from "lucide-react";
+import { Check, XCircle, ShieldCheckIcon, Users, Video, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -138,7 +138,9 @@ export const AdminDashboardView = () => {
                         <div className="flex items-center gap-2 mb-1">
                           <CardTitle className="text-lg line-clamp-1">{channel.name}</CardTitle>
                           {channel.isVerified && (
-                            <CheckCircle2 className="h-5 w-5 text-blue-500 fill-blue-500 shrink-0" />
+                          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                          </div>
                           )}
                         </div>
                         {channel.userUsername && (
@@ -186,7 +188,10 @@ export const AdminDashboardView = () => {
                           onClick={() => verifyChannel.mutate({ channelId: channel.id })}
                           disabled={verifyChannel.isPending}
                         >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
+                        <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                      </div>
+
                           Verificar
                         </Button>
                       )}
