@@ -96,7 +96,36 @@ export const videos = pgTable("videos", {
   }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  likes: integer("likes").default(0).notNull(),
 });
+
+export const videoLikes = pgTable(
+  "video_likes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    videoId: uuid("video_id")
+      .references(() => videos.id, { onDelete: "cascade" })
+      .notNull(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("video_user_like_idx").on(t.videoId, t.userId),
+  ]
+);
+export const videoLikeRelations = relations(videoLikes, ({ one }) => ({
+  video: one(videos, {
+    fields: [videoLikes.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [videoLikes.userId],
+    references: [users.id],
+  }),
+}));
+
 
 export const videoInsertSchema = createInsertSchema(videos);
 export const videoUpdateSchema = createUpdateSchema(videos);
