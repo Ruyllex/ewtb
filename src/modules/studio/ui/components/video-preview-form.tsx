@@ -11,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTRPC } from "@/trpc/client";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, PlayIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -25,7 +25,6 @@ interface VideoPreviewFormProps {
 }
 
 export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -34,39 +33,33 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
   const [visibility, setVisibility] = useState<"public" | "private">("private");
 
   // Obtener categorías
-  const { data: categories } = useQuery(trpc.categories.getMany.queryOptions());
+  const { data: categories } = api.categories.getMany.useQuery();
 
   // Obtener estado del upload
-  const { data: uploadStatus, isLoading: isLoadingStatus } = useQuery(
-    trpc.videos.getUploadStatus.queryOptions({ uploadId })
-  );
+  const { data: uploadStatus, isLoading: isLoadingStatus } = api.videos.getUploadStatus.useQuery({ uploadId });
 
   // Polling para verificar cuando el video esté listo
   useEffect(() => {
     if (uploadStatus?.ready) return;
 
     const interval = setInterval(() => {
-      queryClient.invalidateQueries({
-        queryKey: trpc.videos.getUploadStatus.queryKey({ uploadId }),
-      });
+      queryClient.invalidateQueries();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [uploadStatus?.ready, uploadId, queryClient, trpc.videos.getUploadStatus]);
+  }, [uploadStatus?.ready, uploadId, queryClient]);
 
   // Finalizar video
-  const finalize = useMutation(
-    trpc.videos.finalize.mutationOptions({
-      onSuccess: (video) => {
-        toast.success("Video guardado exitosamente");
-        queryClient.invalidateQueries({ refetchType: "active" });
-        router.push(`/studio/videos/${video.id}`);
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al guardar el video");
-      },
-    })
-  );
+  const finalize = api.videos.finalize.useMutation({
+    onSuccess: (video) => {
+      toast.success("Video guardado exitosamente");
+      queryClient.invalidateQueries();
+      router.push(`/studio/videos/${video.id}`);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al guardar el video");
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

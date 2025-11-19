@@ -1,6 +1,6 @@
 "use client";
-import { api as trpc } from "@/trpc/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +37,6 @@ interface CommentItemProps {
 }
 
 export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { isSignedIn } = useAuth();
   const [showReplies, setShowReplies] = useState(false);
@@ -50,8 +49,7 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
     data: repliesData,
     isLoading: isLoadingReplies,
     refetch: refetchReplies,
-  } = useQuery({
-    ...trpc.comment.getReplies.queryOptions({ parentId: comment.id, limit: 50 }),
+  } = api.comment.getReplies.useQuery({ parentId: comment.id, limit: 50 }, {
     enabled: showReplies,
   });
 
@@ -83,8 +81,7 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
   }, [showReplies, videoId, comment.id, refetchReplies]);
 
   // Mutación para agregar respuesta
-  const addReply = useMutation(
-    trpc.comment.add.mutationOptions({
+  const addReply = api.comment.add.useMutation({
       onSuccess: () => {
         setReplyText("");
         setShowReplyForm(false);
@@ -106,8 +103,7 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
       onSettled: () => {
         setIsSubmitting(false);
       },
-    })
-  );
+    });
 
   const handleReplySubmit = async (e: React.FormEvent) => {
     e.preventDefault();

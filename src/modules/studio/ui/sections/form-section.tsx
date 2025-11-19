@@ -15,9 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { videoUpdateSchema } from "@/db/schema";
 import { snakeCaseToTitleCase } from "@/lib/utils";
 import VideoPlayer from "@/modules/videos/ui/components/video-player";
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   CopyCheckIcon,
   CopyIcon,
@@ -60,46 +60,28 @@ const FormSectionSkeleton: FC = () => {
 };
 
 const FormSectionSuspense: FC<FormSectionProps> = ({ videoId }) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
 
   const [thumbnailModalOpen, setThumbnailModalOpen] = useState<boolean>(false);
 
-  const studioManyQueryKey = useMemo(() => trpc.studio.getMany.queryKey(), [trpc]);
+  const { data: video, refetch: refetchVideo } = api.studio.getOne.useSuspenseQuery({ id: videoId });
+  const { data: categories } = api.categories.getMany.useSuspenseQuery();
 
-  const { data: video, refetch: refetchVideo } = useSuspenseQuery(
-    trpc.studio.getOne.queryOptions({ id: videoId })
-  );
-  const { data: categories } = useSuspenseQuery(trpc.categories.getMany.queryOptions());
-
-  const update = useMutation(
-    trpc.videos.update.mutationOptions({
+  const update = api.videos.update.useMutation({
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getMany.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getOne.queryKey({ id: videoId }),
-        });
+        queryClient.invalidateQueries();
         toast.success("Video Updated ");
       },
 
       onError: () => {
         toast.error("Something went wrong");
       },
-    })
-  );
+    });
 
-  const remove = useMutation(
-    trpc.videos.remove.mutationOptions({
+  const remove = api.videos.remove.useMutation({
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getMany.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getOne.queryKey({ id: videoId }),
-        });
+        queryClient.invalidateQueries();
         toast.success("Video removed successfully");
         router.push("/studio");
       },
@@ -107,26 +89,18 @@ const FormSectionSuspense: FC<FormSectionProps> = ({ videoId }) => {
       onError: () => {
         toast.error("Something went wrong");
       },
-    })
-  );
+    });
 
-  const restoreThumbnail = useMutation(
-    trpc.videos.restoreThumbnail.mutationOptions({
+  const restoreThumbnail = api.videos.restoreThumbnail.useMutation({
       onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getMany.queryKey(),
-        });
-        queryClient.invalidateQueries({
-          queryKey: trpc.studio.getOne.queryKey({ id: videoId }),
-        });
+        queryClient.invalidateQueries();
         toast.success("Thumbnail restored successfully");
       },
 
       onError: () => {
         toast.error("Something went wrong");
       },
-    })
-  );
+    });
 
   const form = useForm<z.infer<typeof videoUpdateSchema>>({
     resolver: zodResolver(videoUpdateSchema),

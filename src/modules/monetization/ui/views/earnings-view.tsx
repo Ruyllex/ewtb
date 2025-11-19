@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useTRPC } from "@/trpc/client";
+import { api as trpc } from "@/trpc/client";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +26,6 @@ import { ResponsiveModal } from "@/components/responsive-dialog";
 import Image from "next/image";
 
 export const EarningsView = () => {
-  const trpc = useTRPC();
   const [payoutAmount, setPayoutAmount] = useState("");
   const [showPayoutModal, setShowPayoutModal] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -35,19 +34,14 @@ export const EarningsView = () => {
     setMounted(true);
   }, []);
 
-  const { data: connectStatus, isLoading: isLoadingStatus } = useQuery(
-    trpc.monetization.getConnectStatus.queryOptions()
-  );
+  const { data: connectStatus, isLoading: isLoadingStatus } = trpc.monetization.getConnectStatus.useQuery();
 
-  const { data: earnings, isLoading: isLoadingEarnings, refetch: refetchEarnings } = useQuery(
-    trpc.monetization.getEarnings.queryOptions({
-      limit: 50,
-      offset: 0,
-    })
-  );
+  const { data: earnings, isLoading: isLoadingEarnings, refetch: refetchEarnings } = trpc.monetization.getEarnings.useQuery({
+    limit: 50,
+    offset: 0,
+  });
 
-  const verifyMonetization = useMutation(
-    trpc.monetization.verifyMonetization.mutationOptions({
+  const verifyMonetization = trpc.monetization.verifyMonetization.useMutation({
       onSuccess: (data) => {
         if (data.can) {
           toast.success("¡Monetización habilitada exitosamente!");
@@ -58,11 +52,9 @@ export const EarningsView = () => {
       onError: (error) => {
         toast.error(error.message || "Error al verificar monetización");
       },
-    })
-  );
+    });
 
-  const createPayout = useMutation(
-    trpc.monetization.createPayout.mutationOptions({
+  const createPayout = trpc.monetization.createPayout.useMutation({
       onSuccess: () => {
         toast.success("Retiro solicitado exitosamente");
         setShowPayoutModal(false);
@@ -72,8 +64,7 @@ export const EarningsView = () => {
       onError: (error) => {
         toast.error(error.message || "Error al crear retiro");
       },
-    })
-  );
+    });
 
   const handleConnectStripe = async () => {
     try {

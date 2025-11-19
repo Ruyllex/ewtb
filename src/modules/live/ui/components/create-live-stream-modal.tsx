@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { useTRPC } from "@/trpc/client";
+import { api as trpc } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, VideoIcon } from "lucide-react";
 import { useState } from "react";
@@ -18,14 +18,12 @@ interface CreateLiveStreamModalProps {
 }
 
 export const CreateLiveStreamModal = ({ open, onOpenChange }: CreateLiveStreamModalProps) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
 
-  const create = useMutation(
-    trpc.live.create.mutationOptions({
+  const create = trpc.live.create.useMutation({
       onSuccess: (stream) => {
         toast.success("Stream creado exitosamente");
         queryClient.invalidateQueries({ refetchType: "active" });
@@ -49,8 +47,7 @@ export const CreateLiveStreamModal = ({ open, onOpenChange }: CreateLiveStreamMo
           }, 1000);
         }
       },
-    })
-  );
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

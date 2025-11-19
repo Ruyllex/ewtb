@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react"; // <-- IMPORTAR React
 import {
   Dialog,
   DialogContent,
@@ -16,70 +16,54 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/nextjs";
-import { useTRPC } from "@/trpc/client";
-import { useQuery } from "@tanstack/react-query";
+import { api as trpc } from "@/trpc/client";
 
 interface ReportVideoDialogProps {
   videoId: string;
-  trigger?: React.ReactNode;
+  trigger?: React.ReactNode; // puede quedarse así
 }
 
 /**
  * Diálogo para reportar un video
- * Permite a los usuarios reportar contenido inapropiado
  */
 export const ReportVideoDialog = ({ videoId, trigger }: ReportVideoDialogProps) => {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isSignedIn, userId: clerkUserId } = useAuth();
-  const trpc = useTRPC();
 
-  // Obtener el usuario actual para obtener su ID de la BD
-  const { data: currentUser } = useQuery({
-    ...trpc.users.getProfile.queryOptions(),
-    enabled: isSignedIn,
-  });
+  const { data: currentUser } = trpc.users.getProfile.useQuery(
+    undefined,
+    { enabled: isSignedIn }
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!isSignedIn) {
       toast.error("Debes iniciar sesión para reportar un video");
       return;
     }
-
     if (!reason.trim()) {
       toast.error("Por favor, proporciona una razón para el reporte");
       return;
     }
-
     if (reason.trim().length < 10) {
       toast.error("La razón del reporte debe tener al menos 10 caracteres");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const response = await fetch("/api/reportVideo", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           video_id: videoId,
           reason: reason.trim(),
-          user_id: currentUser?.id, // Se puede omitir, el endpoint lo obtendrá de la sesión
+          user_id: currentUser?.id,
         }),
       });
-
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Error al reportar el video");
-      }
-
+      if (!response.ok) throw new Error(data.error || "Error al reportar el video");
       toast.success("Video reportado exitosamente. Gracias por ayudarnos a mantener la comunidad segura.");
       setReason("");
       setOpen(false);
@@ -98,11 +82,15 @@ export const ReportVideoDialog = ({ videoId, trigger }: ReportVideoDialogProps) 
     </Button>
   );
 
+  // <-- aquí nos aseguramos de pasar EXACTAMENTE un ReactElement a DialogTrigger
+  const triggerElement = React.isValidElement(trigger) ? trigger : defaultTrigger;
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || defaultTrigger}
+        {triggerElement}
       </DialogTrigger>
+
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -114,6 +102,7 @@ export const ReportVideoDialog = ({ videoId, trigger }: ReportVideoDialogProps) 
             Tu reporte será revisado por nuestro equipo de moderación.
           </DialogDescription>
         </DialogHeader>
+
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -134,6 +123,7 @@ export const ReportVideoDialog = ({ videoId, trigger }: ReportVideoDialogProps) 
               </div>
             </div>
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -155,4 +145,3 @@ export const ReportVideoDialog = ({ videoId, trigger }: ReportVideoDialogProps) 
     </Dialog>
   );
 };
-

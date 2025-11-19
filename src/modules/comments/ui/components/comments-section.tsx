@@ -1,7 +1,7 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,7 +16,6 @@ interface CommentsSectionProps {
 }
 
 export const CommentsSection = ({ videoId }: CommentsSectionProps) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { isSignedIn } = useAuth();
   const [commentText, setCommentText] = useState("");
@@ -29,11 +28,10 @@ export const CommentsSection = ({ videoId }: CommentsSectionProps) => {
     data: commentsData,
     isLoading,
     refetch,
-  } = useQuery(trpc.comment.list.queryOptions({ videoId, limit: 50 }));
+  } = api.comment.list.useQuery({ videoId, limit: 50 });
 
   // Mutación para agregar comentario
-  const addComment = useMutation(
-    trpc.comment.add.mutationOptions({
+  const addComment = api.comment.add.useMutation({
       onSuccess: () => {
         setCommentText("");
         queryClient.invalidateQueries({
@@ -50,8 +48,7 @@ export const CommentsSection = ({ videoId }: CommentsSectionProps) => {
       onSettled: () => {
         setIsSubmitting(false);
       },
-    })
-  );
+    });
 
   // Suscribirse a eventos de Pusher para comentarios en tiempo real
   useEffect(() => {

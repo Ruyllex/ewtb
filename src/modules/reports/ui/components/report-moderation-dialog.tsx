@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle2, XCircle, ShieldCheckIcon } from "lucide-react";
 import { toast } from "sonner";
-import { useTRPC } from "@/trpc/client";
+import { api as trpc } from "@/trpc/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface ReportModerationDialogProps {
@@ -63,11 +63,9 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
   const [suspensionDays, setSuspensionDays] = useState<number>(7);
   const [penalizeReporter, setPenalizeReporter] = useState(false);
 
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
-  const reviewReport = useMutation(
-    trpc.reports.reviewReport.mutationOptions({
+  const reviewReport = trpc.reports.reviewReport.useMutation({
       onSuccess: () => {
         queryClient.invalidateQueries();
         toast.success("Reporte revisado exitosamente");
@@ -85,8 +83,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
       onError: (error) => {
         toast.error(error.message || "Error al revisar el reporte");
       },
-    })
-  );
+    });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

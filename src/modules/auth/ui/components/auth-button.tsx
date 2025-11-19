@@ -5,22 +5,23 @@ import { ClapperboardIcon, LoaderIcon, UserCircleIcon, ShieldCheckIcon } from "l
 import { useState, useEffect } from "react";
 
 import { ClerkLoading, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 
 export const AuthButton = () => {
   const [mounted, setMounted] = useState(false);
-  const trpc = useTRPC();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Verificar si el usuario es admin
-  const { data: isAdmin } = useQuery({
-    ...trpc.users.isAdmin.queryOptions(),
-    enabled: mounted,
-  });
+  const { data: isAdmin } = api.users.isAdmin.useQuery( // 🛑 CORRECCIÓN: Usamos .useQuery
+      undefined, // Si no toma parámetros, pasamos 'undefined'
+      {
+        enabled: mounted,
+      }
+    );
 
   // Renderizar un placeholder durante SSR para evitar errores de hidratación
   if (!mounted) {

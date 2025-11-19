@@ -4,8 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { DEFAULT_LIMIT } from "@/constants";
 import { snakeCaseToTitleCase } from "@/lib/utils";
 import { VideoThumbnail } from "@/modules/videos/ui/components/video-thumbnail";
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseInfiniteQuery } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
 import { format } from "date-fns";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -89,22 +88,19 @@ const VideoSectionSkeleton = () => {
 };
 
 export const VideosSectionSuspense = () => {
-  const trpc = useTRPC();
   const {
     data: videos,
     hasNextPage,
     isFetchingNextPage,
     fetchNextPage,
     refetch,
-  } = useSuspenseInfiniteQuery(
-    trpc.studio.getMany.infiniteQueryOptions(
-      { limit: DEFAULT_LIMIT },
-      {
-        getNextPageParam(lastPage) {
-          return lastPage.nextCursor;
-        },
-      }
-    )
+  } = api.studio.getMany.useSuspenseInfiniteQuery(
+    { limit: DEFAULT_LIMIT },
+    {
+      getNextPageParam(lastPage) {
+        return lastPage.nextCursor;
+      },
+    }
   );
 
   const shouldPoll = videos.pages.some((page) =>

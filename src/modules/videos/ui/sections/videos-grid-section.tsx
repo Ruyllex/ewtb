@@ -1,7 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
 import { VideoCard } from "../components/video-card";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +61,6 @@ const VideosGridSectionSuspense = ({ categoryId }: VideosGridSectionProps) => {
 };
 
 const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
-  const trpc = useTRPC();
   const {
     data,
     hasNextPage,
@@ -70,16 +68,14 @@ const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
     fetchNextPage,
     isLoading,
     error,
-  } = useInfiniteQuery(
-    trpc.videos.getMany.infiniteQueryOptions(
-      { categoryId, limit: 20 },
-      {
-        getNextPageParam(lastPage) {
-          return lastPage.nextCursor;
-        },
-        retry: false, // No reintentar si falla
-      }
-    )
+  } = api.videos.getMany.useInfiniteQuery(
+    { categoryId, limit: 20 },
+    {
+      getNextPageParam(lastPage) {
+        return lastPage.nextCursor;
+      },
+      retry: false, // No reintentar si falla
+    }
   );
 
   // Si hay error, mostrar mensaje

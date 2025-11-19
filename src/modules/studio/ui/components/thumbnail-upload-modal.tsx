@@ -1,6 +1,6 @@
 import { ResponsiveModal } from "@/components/responsive-dialog";
 import { UploadDropzone } from "@/lib/uploadthing";
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ThumbnailUploadModalProps {
@@ -14,21 +14,11 @@ export const ThumbnailUploadModal = ({
   open,
   onOpenChange,
 }: ThumbnailUploadModalProps) => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
 
   const onUploadComplete = () => {
-    // Invalidar la cache del video específico para que el thumbnail se actualice -> antes era utils
-    queryClient.invalidateQueries({
-      queryKey: trpc.studio.getOne.queryKey({ id: videoId }),
-      refetchType: "active",
-    });
-
-    queryClient.invalidateQueries({
-      queryKey: trpc.studio.getMany.queryKey(),
-      refetchType: "active",
-    });
-
+    // Invalidar la cache del video específico para que el thumbnail se actualice
+    queryClient.invalidateQueries();
     onOpenChange(false);
   };
 

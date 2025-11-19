@@ -2,8 +2,8 @@
 
 import { ResponsiveModal } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
-import { useTRPC } from "@/trpc/client";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2Icon, PlusIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { StudioUploader } from "./studio-uploader";
@@ -13,24 +13,21 @@ import { useState } from "react";
 type UploadStep = "idle" | "uploading" | "preview";
 
 export const StudioUploadModal = () => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [step, setStep] = useState<UploadStep>("idle");
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
 
-  const create = useMutation(
-    trpc.videos.create.mutationOptions({
-      onSuccess: (data) => {
-        setUploadId(data.uploadId);
-        setUploadUrl(data.url);
-        setStep("uploading");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al crear el upload");
-      },
-    })
-  );
+  const create = api.videos.create.useMutation({
+    onSuccess: (data) => {
+      setUploadId(data.uploadId);
+      setUploadUrl(data.url);
+      setStep("uploading");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al crear el upload");
+    },
+  });
 
   const handleUploadComplete = (completedUploadId: string) => {
     setStep("preview");

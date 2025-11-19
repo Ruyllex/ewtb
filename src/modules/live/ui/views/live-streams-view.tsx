@@ -1,8 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useTRPC } from "@/trpc/client";
-import { useSuspenseInfiniteQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { api as trpc } from "@/trpc/client";
 import { Suspense, useState } from "react";
 import { CreateLiveStreamModal } from "../components/create-live-stream-modal";
 import { VideoIcon, PlusIcon, CopyIcon, CopyCheckIcon } from "lucide-react";
@@ -53,7 +52,6 @@ export const LiveStreamsView = () => {
 };
 
 const LiveStreamsViewSuspense = () => {
-  const trpc = useTRPC();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -65,13 +63,14 @@ const LiveStreamsViewSuspense = () => {
     fetchNextPage,
     isLoading,
     error,
-  } = useInfiniteQuery(
-    trpc.live.getMany.infiniteQueryOptions({ limit: 20 }, {
+  } = trpc.live.getMany.useInfiniteQuery(
+    { limit: 20 },
+    {
       getNextPageParam(lastPage) {
-        return lastPage.nextCursor;
+        return lastPage?.nextCursor;
       },
       retry: false, // No reintentar si falla
-    })
+    }
   );
 
   // Si hay error, mostrar mensaje

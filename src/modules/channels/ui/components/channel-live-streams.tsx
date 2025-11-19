@@ -1,6 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
@@ -8,7 +8,6 @@ import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { RadioIcon } from "lucide-react";
 import MuxPlayer from "@mux/mux-player-react";
-import { useQuery } from "@tanstack/react-query";
 
 interface ChannelLiveStreamsProps {
   username: string;
@@ -25,9 +24,7 @@ const LiveStreamCardSkeleton = () => (
 );
 
 export const ChannelLiveStreams = ({ username }: ChannelLiveStreamsProps) => {
-  const trpc = useTRPC();
-
-  const { data: streams, isLoading, error } = useQuery(trpc.channels.getLiveStreams.queryOptions({ username }));
+  const { data: streams, isLoading, error } = api.channels.getLiveStreams.useQuery({ username });
 
   if (isLoading) {
     return (

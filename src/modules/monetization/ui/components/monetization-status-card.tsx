@@ -1,6 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { api as trpc } from "@/trpc/client";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,14 +10,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export const MonetizationStatusCard = () => {
-  const trpc = useTRPC();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const { data: connectStatus, isLoading } = useQuery(trpc.monetization.getConnectStatus.queryOptions());
+  const { data: connectStatus, isLoading } = trpc.monetization.getConnectStatus.useQuery();
 
   if (!mounted || isLoading) {
     return null;

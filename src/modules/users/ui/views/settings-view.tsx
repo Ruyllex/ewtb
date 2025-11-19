@@ -1,6 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +16,9 @@ import Image from "next/image";
 import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
 
 export const SettingsView = () => {
-  const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const { data: profile, isLoading } = useQuery(trpc.users.getProfile.queryOptions());
-  const { data: channel, isLoading: isLoadingChannel } = useQuery(trpc.channels.getMyChannel.queryOptions());
+  const { data: profile, isLoading } = api.users.getProfile.useQuery();
+  const { data: channel, isLoading: isLoadingChannel } = api.channels.getMyChannel.useQuery();
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [username, setUsername] = useState("");
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
@@ -44,14 +43,13 @@ export const SettingsView = () => {
     }
   }, [channel]);
 
-  const updateDateOfBirthMutation = useMutation(
-    trpc.users.updateDateOfBirth.mutationOptions({
+  const updateDateOfBirthMutation = api.users.updateDateOfBirth.useMutation({
       onSuccess: (data) => {
         toast.success("Fecha de nacimiento actualizada correctamente");
-        queryClient.invalidateQueries({ queryKey: trpc.users.getProfile.queryKey() });
+        queryClient.invalidateQueries();
         // También invalidar la verificación de monetización ya que la fecha de nacimiento afecta
-        queryClient.invalidateQueries({ queryKey: trpc.monetization.verifyMonetization.queryKey() });
-        queryClient.invalidateQueries({ queryKey: trpc.monetization.getConnectStatus.queryKey() });
+        queryClient.invalidateQueries();
+        queryClient.invalidateQueries();
         
         // Si ahora puede monetizar, mostrar mensaje adicional
         if (data.canMonetize) {
@@ -66,16 +64,15 @@ export const SettingsView = () => {
     })
   );
 
-  const updateChannelMutation = useMutation(
-    trpc.channels.update.mutationOptions({
+  const updateChannelMutation = api.channels.update.useMutation({
       onSuccess: (data) => {
         toast.success("Canal actualizado correctamente");
         // Invalidar todas las queries relacionadas con el canal
-        queryClient.invalidateQueries({ queryKey: trpc.channels.getMyChannel.queryKey() });
-        queryClient.invalidateQueries({ queryKey: trpc.channels.getByUsername.queryKey() });
+        queryClient.invalidateQueries({ queryKey: api.channels.getMyChannel.queryKey() });
+        queryClient.invalidateQueries({ queryKey: api.channels.getByUsername.queryKey() });
         // Si se actualizó el username, también invalidar las queries de usuario
         if (data) {
-          queryClient.invalidateQueries({ queryKey: trpc.users.getProfile.queryKey() });
+          queryClient.invalidateQueries({ queryKey: api.users.getProfile.queryKey() });
         }
       },
       onError: (error) => {
@@ -295,8 +292,8 @@ export const SettingsView = () => {
                       toast.success("Banner actualizado correctamente");
                       // Esperar un poco antes de invalidar para asegurar que el servidor haya procesado
                       setTimeout(() => {
-                        queryClient.invalidateQueries({ queryKey: trpc.channels.getMyChannel.queryKey() });
-                        queryClient.invalidateQueries({ queryKey: trpc.channels.getByUsername.queryKey() });
+                        queryClient.invalidateQueries({ queryKey: api.channels.getMyChannel.queryKey() });
+                        queryClient.invalidateQueries({ queryKey: api.channels.getByUsername.queryKey() });
                       }, 500);
                     }}
                     onUploadError={(error) => {
@@ -352,8 +349,8 @@ export const SettingsView = () => {
                       toast.success("Avatar actualizado correctamente");
                       // Esperar un poco antes de invalidar para asegurar que el servidor haya procesado
                       setTimeout(() => {
-                        queryClient.invalidateQueries({ queryKey: trpc.channels.getMyChannel.queryKey() });
-                        queryClient.invalidateQueries({ queryKey: trpc.channels.getByUsername.queryKey() });
+                        queryClient.invalidateQueries({ queryKey: api.channels.getMyChannel.queryKey() });
+                        queryClient.invalidateQueries({ queryKey: api.channels.getByUsername.queryKey() });
                       }, 500);
                     }}
                     onUploadError={(error) => {

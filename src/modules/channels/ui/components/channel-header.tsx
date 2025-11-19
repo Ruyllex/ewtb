@@ -1,10 +1,13 @@
+// src/modules/channels/ui/components/channel-header.tsx
 "use client";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { useTRPC } from "@/trpc/client";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Bell, BellOff } from "lucide-react"; // 👈 Se cambió CheckCircle2 por Check
+// 🛑 CORREGIDO: Importamos 'api' como 'trpc'
+import { api as trpc } from "@/trpc/client"; 
+// 🛑 ELIMINADO: Ya no necesitamos importar useQuery ni useMutation de React Query
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, Bell, BellOff } from "lucide-react"; 
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { UploadButton } from "@/lib/uploadthing";
@@ -32,29 +35,32 @@ interface ChannelHeaderProps {
 }
 
 export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
-  const trpc = useTRPC();
+  // 🛑 ELIMINADO: const trpc = useTRPC();
   const queryClient = useQueryClient();
   const { userId } = useAuth();
   const router = useRouter();
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
 
-  const { data: isSubscribed, isLoading: isLoadingSubscription } = useQuery({
-    ...trpc.channels.isSubscribed.queryOptions({ channelId: channel.id }),
-    enabled: isSignedIn && userId !== channel.user.id,
-  });
-
-  const toggleSubscription = useMutation(
-    trpc.channels.toggleSubscription.mutationOptions({
-      onSuccess: (data) => {
-        queryClient.invalidateQueries();
-        toast.success(data.subscribed ? "Te has suscrito al canal" : "Te has desuscrito del canal");
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al suscribirse");
-      },
-    })
+  // 🛑 CORREGIDO: Uso de trpc.channels.isSubscribed.useQuery
+  const { data: isSubscribed, isLoading: isLoadingSubscription } = trpc.channels.isSubscribed.useQuery(
+    { channelId: channel.id },
+    { 
+      enabled: isSignedIn && userId !== channel.user.id,
+    }
   );
+
+  // 🛑 CORREGIDO: Uso de trpc.channels.toggleSubscription.useMutation
+  const toggleSubscription = trpc.channels.toggleSubscription.useMutation({
+    onSuccess: (data) => {
+      // Corregido: invalidar queries
+      queryClient.invalidateQueries(); 
+      toast.success(data.subscribed ? "Te has suscrito al canal" : "Te has desuscrito del canal");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al suscribirse");
+    },
+  });
 
   const isOwner = userId === channel.user.id;
   const avatarUrl = channel.avatar || channel.user.imageUrl;
@@ -85,14 +91,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                   toast.success("Banner actualizado correctamente");
                   // Invalidar queries después de un breve delay
                   setTimeout(() => {
-                    if (channel.user.username) {
-                      queryClient.invalidateQueries({ 
-                        queryKey: trpc.channels.getByUsername.queryKey({ username: channel.user.username }) 
-                      });
-                    }
-                    queryClient.invalidateQueries({ queryKey: trpc.channels.getMyChannel.queryKey() });
-                    // Invalidar todas las queries de canales para asegurar actualización
-                    queryClient.invalidateQueries({ queryKey: [["channels"]] });
+                    queryClient.invalidateQueries();
                   }, 500);
                 }}
                 onUploadError={(error) => {
@@ -149,14 +148,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                       toast.success("Avatar actualizado correctamente");
                       // Invalidar queries después de un breve delay
                       setTimeout(() => {
-                        if (channel.user.username) {
-                          queryClient.invalidateQueries({ 
-                            queryKey: trpc.channels.getByUsername.queryKey({ username: channel.user.username }) 
-                          });
-                        }
-                        queryClient.invalidateQueries({ queryKey: trpc.channels.getMyChannel.queryKey() });
-                        // Invalidar todas las queries de canales para asegurar actualización
-                        queryClient.invalidateQueries({ queryKey: [["channels"]] });
+                        queryClient.invalidateQueries();
                       }, 500);
                     }}
                     onUploadError={(error) => {
@@ -190,8 +182,8 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                 {channel.isVerified && (
                   // 👇 CAMBIO: Usando Check
                   <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                  <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
-                </div>
+                    <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -203,7 +195,6 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                 <p className="text-sm text-muted-foreground max-w-2xl mt-2">{channel.description}</p>
               )}
             </div>
-
             {/* Subscribe Button */}
             {isSignedIn && !isOwner && (
               <Button
@@ -229,6 +220,10 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
             )}
           </div>
         </div>
+      </div>
+      <div className="absolute top-0 right-0 p-4">
+        {/* Solo para fines de depuración, mantener o remover según necesidad */}
+        {process.env.NODE_ENV !== 'production' && <span className="text-xs text-white bg-black/50 p-1 rounded">Debug: Tkn ID: {process.env.NEXT_PUBLIC_MUX_TOKEN_ID ? 'Sí' : 'No'}</span>}
       </div>
     </div>
   );

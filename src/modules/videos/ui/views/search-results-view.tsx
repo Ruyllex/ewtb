@@ -1,6 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import Link from "next/link";
@@ -54,9 +54,8 @@ export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
 };
 
 const SearchResultsSuspense = ({ query }: { query: string }) => {
-  const trpc = useTRPC();
   const router = useRouter();
-  const { data } = useSuspenseQuery(trpc.videos.search.queryOptions({ query, limit: 20 }));
+  const { data } = api.videos.search.useSuspenseQuery({ query, limit: 20 });
 
   const hasVideos = data.videos && data.videos.length > 0;
   const hasChannels = data.channels && data.channels.length > 0;

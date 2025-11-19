@@ -1,10 +1,9 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
+import { api } from "@/trpc/client";
 import { VideoCard } from "@/modules/videos/ui/components/video-card";
 import { InfiniteScroll } from "@/components/infinite-scroll";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInfiniteQuery } from "@tanstack/react-query";
 
 interface ChannelVideosProps {
   username: string;
@@ -24,8 +23,6 @@ const VideoCardSkeleton = () => (
 );
 
 export const ChannelVideos = ({ username }: ChannelVideosProps) => {
-  const trpc = useTRPC();
-
   const {
     data,
     hasNextPage,
@@ -33,18 +30,16 @@ export const ChannelVideos = ({ username }: ChannelVideosProps) => {
     fetchNextPage,
     isLoading,
     error,
-  } = useInfiniteQuery(
-    trpc.channels.getVideos.infiniteQueryOptions(
-      {
-        username,
-        limit: 20,
+  } = api.channels.getVideos.useInfiniteQuery(
+    {
+      username,
+      limit: 20,
+    },
+    {
+      getNextPageParam(lastPage) {
+        return lastPage.nextCursor;
       },
-      {
-        getNextPageParam(lastPage) {
-          return lastPage.nextCursor;
-        },
-      }
-    )
+    }
   );
 
   if (isLoading) {
