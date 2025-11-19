@@ -44,42 +44,40 @@ export const SettingsView = () => {
   }, [channel]);
 
   const updateDateOfBirthMutation = api.users.updateDateOfBirth.useMutation({
-      onSuccess: (data) => {
-        toast.success("Fecha de nacimiento actualizada correctamente");
-        queryClient.invalidateQueries();
-        // También invalidar la verificación de monetización ya que la fecha de nacimiento afecta
-        queryClient.invalidateQueries();
-        queryClient.invalidateQueries();
-        
-        // Si ahora puede monetizar, mostrar mensaje adicional
-        if (data.canMonetize) {
-          setTimeout(() => {
-            toast.success("¡Monetización habilitada! Ahora puedes recibir pagos.");
-          }, 500);
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al actualizar la fecha de nacimiento");
-      },
-    })
-  );
+    onSuccess: (data) => {
+      toast.success("Fecha de nacimiento actualizada correctamente");
+      queryClient.invalidateQueries();
+      // También invalidar la verificación de monetización ya que la fecha de nacimiento afecta
+      queryClient.invalidateQueries();
+      queryClient.invalidateQueries();
+
+      // Si ahora puede monetizar, mostrar mensaje adicional
+      if (data.canMonetize) {
+        setTimeout(() => {
+          toast.success("¡Monetización habilitada! Ahora puedes recibir pagos.");
+        }, 500);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al actualizar la fecha de nacimiento");
+    },
+  });
 
   const updateChannelMutation = api.channels.update.useMutation({
-      onSuccess: (data) => {
-        toast.success("Canal actualizado correctamente");
-        // Invalidar todas las queries relacionadas con el canal
-        queryClient.invalidateQueries({ queryKey: api.channels.getMyChannel.queryKey() });
-        queryClient.invalidateQueries({ queryKey: api.channels.getByUsername.queryKey() });
-        // Si se actualizó el username, también invalidar las queries de usuario
-        if (data) {
-          queryClient.invalidateQueries({ queryKey: api.users.getProfile.queryKey() });
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al actualizar el canal");
-      },
-    })
-  );
+    onSuccess: (data) => {
+      toast.success("Canal actualizado correctamente");
+      // Invalidar todas las queries relacionadas con el canal
+      queryClient.invalidateQueries({ queryKey: api.channels.getMyChannel.queryKey() });
+      queryClient.invalidateQueries({ queryKey: api.channels.getByUsername.queryKey() });
+      // Si se actualizó el username, también invalidar las queries de usuario
+      if (data) {
+        queryClient.invalidateQueries({ queryKey: api.users.getProfile.queryKey() });
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al actualizar el canal");
+    },
+  });
 
   const handleUpdateUsername = () => {
     if (!username || username.trim() === "") {
