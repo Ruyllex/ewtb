@@ -8,8 +8,14 @@ interface SearchPageProps {
 const SearchPage = async ({ searchParams }: SearchPageProps) => {
   const { q } = await searchParams;
 
+  // Prefetch de datos de búsqueda si hay query
   if (q) {
-    prefetch(trpc.videos.search.queryOptions({ query: q, limit: 20 }));
+    try {
+      await prefetch(trpc.videos.search.queryOptions({ query: q, limit: 20 }));
+    } catch (error) {
+      // Si el prefetch falla, continuar sin pre-cargar los datos
+      console.warn("Failed to prefetch search data:", error);
+    }
   }
 
   return (

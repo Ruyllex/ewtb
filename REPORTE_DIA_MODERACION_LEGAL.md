@@ -83,8 +83,4 @@ Implementar control mínimo y cumplimiento legal en la aplicación web con siste
 
 ---
 
-## Próximos Pasos
-1. Ejecutar migración de BD
-2. Revisar y personalizar contenido legal
-3. Configurar Upstash Redis si no está configurado
-4. Probar flujo completo de reportes y moderación
+

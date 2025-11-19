@@ -26,7 +26,17 @@ createTRPCOptionsProxy({
 
 export function HydrateClient(props: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
-  return <HydrationBoundary state={dehydrate(queryClient)}>{props.children}</HydrationBoundary>;
+  const dehydratedState = dehydrate(queryClient);
+  
+  // Envolver children en un div para asegurar un único elemento hijo
+  // Esto resuelve el problema con HydrationBoundary que espera un único elemento
+  return (
+    <HydrationBoundary state={dehydratedState}>
+      <div style={{ display: 'contents' }}>
+        {props.children}
+      </div>
+    </HydrationBoundary>
+  );
 }
 
 export async function prefetch<T extends ReturnType<TRPCQueryOptions<any>>>(queryOptions: T) {

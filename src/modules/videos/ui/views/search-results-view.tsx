@@ -1,8 +1,6 @@
 "use client";
 
 import { api } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -35,6 +33,8 @@ const SearchResultsSkeleton = () => {
 };
 
 export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
+  const router = useRouter();
+  
   if (!query) {
     return (
       <div className="max-w-[2400px] mx-auto px-4 py-6">
@@ -46,19 +46,40 @@ export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
     );
   }
 
-  return (
-    <Suspense fallback={<SearchResultsSkeleton />}>
-      <SearchResultsSuspense query={query} />
-    </Suspense>
-  );
-};
+  // Usar useQuery en lugar de useSuspenseQuery para mejor control del estado
+  const { data, error, isLoading } = api.videos.search.useQuery({ query, limit: 20 });
 
-const SearchResultsSuspense = ({ query }: { query: string }) => {
-  const router = useRouter();
-  const { data } = api.videos.search.useSuspenseQuery({ query, limit: 20 });
+  // Mostrar skeleton mientras carga
+  if (isLoading) {
+    return <SearchResultsSkeleton />;
+  }
 
-  const hasVideos = data.videos && data.videos.length > 0;
-  const hasChannels = data.channels && data.channels.length > 0;
+  // Manejar errores
+  if (error) {
+    return (
+      <div className="max-w-[2400px] mx-auto px-4 py-6">
+        <h2 className="text-2xl font-semibold mb-4">Search results for &quot;{query}&quot;</h2>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Error al buscar: {error.message || "Error desconocido"}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Validación defensiva: asegurar que data existe y tiene la estructura esperada
+  if (!data) {
+    return (
+      <div className="max-w-[2400px] mx-auto px-4 py-6">
+        <h2 className="text-2xl font-semibold mb-4">Search results for &quot;{query}&quot;</h2>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No se pudieron cargar los resultados</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasVideos = data.videos && Array.isArray(data.videos) && data.videos.length > 0;
+  const hasChannels = data.channels && Array.isArray(data.channels) && data.channels.length > 0;
 
   if (!hasVideos && !hasChannels) {
     return (
