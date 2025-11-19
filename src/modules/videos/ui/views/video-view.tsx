@@ -10,6 +10,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
+import { ReportVideoDialog } from "../components/report-video-dialog";
 import { Button } from "@/components/ui/button";
 import { HeartIcon, CrownIcon, Bell, BellOff, Check } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -136,80 +137,82 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
               </div>
             </div>
 
-            {/* Author info */}
-            <div className="flex items-center gap-4 pb-4 border-b">
-              {video.userUsername ? (
-                <Link href={`/channel/${video.userUsername}`} className="relative w-12 h-12 rounded-full overflow-hidden hover:opacity-80 transition-opacity">
-                  <Image
-                    src={video.userImageUrl}
-                    alt={video.userName}
-                    fill
-                    className="object-cover cursor-pointer"
-                  />
-                </Link>
-              ) : (
-                <div className="relative w-12 h-12 rounded-full overflow-hidden">
-                  <Image
-                    src={video.userImageUrl}
-                    alt={video.userName}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              )}
-              <div className="flex-1">
-                {video.userUsername ? (
-                  <Link href={`/channel/${video.userUsername}`} className="hover:opacity-80 transition-opacity">
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold cursor-pointer">{video.userName}</h3>
-                      {channel?.isVerified && (
-                        <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                        <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ) : (
-                  <h3 className="font-semibold">{video.userName}</h3>
-                )}
-                <p className="text-sm text-muted-foreground">Creator</p>
-              </div>
-              <div className="flex gap-2">
-                {isSignedIn && currentUser?.id !== video.userId && channel && (
-                  <Button
-                    onClick={() => toggleSubscription.mutate({ channelId: channel.id })}
-                    disabled={isLoadingSubscription || toggleSubscription.isPending}
-                    variant={isSubscribed?.subscribed ? "outline" : "default"}
-                    className="shrink-0"
-                  >
-                    {isLoadingSubscription ? (
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                    ) : isSubscribed?.subscribed ? (
-                      <>
-                        <BellOff className="h-4 w-4 mr-2" />
-                        Siguiendo
-                      </>
-                    ) : (
-                      <>
-                        <Bell className="h-4 w-4 mr-2" />
-                        Seguir
-                      </>
-                    )}
-                  </Button>
-                )}
-                {video.userCanMonetize && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setMonetizationOpen(true)}
-                    className="gap-2"
-                  >
-                    <HeartIcon className="size-4" />
-                    <CrownIcon className="size-4" />
-                    Apoyar
-                  </Button>
-                )}
-              </div>
-            </div>
+            {/* Author info */}
+            <div className="flex items-center gap-4 pb-4 border-b">
+              {video.userUsername ? (
+                <Link href={`/channel/${video.userUsername}`} className="relative w-12 h-12 rounded-full overflow-hidden hover:opacity-80 transition-opacity">
+                  <Image
+                    src={video.userImageUrl}
+                    alt={video.userName}
+                    fill
+                    className="object-cover cursor-pointer"
+                  />
+                </Link>
+              ) : (
+                <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                  <Image
+                    src={video.userImageUrl}
+                    alt={video.userName}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1">
+                {video.userUsername ? (
+                  <Link href={`/channel/${video.userUsername}`} className="hover:opacity-80 transition-opacity">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold cursor-pointer">{video.userName}</h3>
+                      {channel?.isVerified && (
+                        <CheckCircle2 className="h-5 w-5 text-blue-500 fill-blue-500" />
+                      )}
+                    </div>
+                  </Link>
+                ) : (
+                  <h3 className="font-semibold">{video.userName}</h3>
+                )}
+                <p className="text-sm text-muted-foreground">Creator</p>
+              </div>
+              <div className="flex gap-2">
+                {isSignedIn && currentUser?.id !== video.userId && channel && (
+                  <Button
+                    onClick={() => toggleSubscription.mutate({ channelId: channel.id })}
+                    disabled={isLoadingSubscription || toggleSubscription.isPending}
+                    variant={isSubscribed?.subscribed ? "outline" : "default"}
+                    className="shrink-0"
+                  >
+                    {isLoadingSubscription ? (
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : isSubscribed?.subscribed ? (
+                      <>
+                        <BellOff className="h-4 w-4 mr-2" />
+                        Siguiendo
+                      </>
+                    ) : (
+                      <>
+                        <Bell className="h-4 w-4 mr-2" />
+                        Seguir
+                      </>
+                    )}
+                  </Button>
+                )}
+                {video.userCanMonetize && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setMonetizationOpen(true)}
+                    className="gap-2"
+                  >
+                    <HeartIcon className="size-4" />
+                    <CrownIcon className="size-4" />
+                    Apoyar
+                  </Button>
+                )}
+                {isSignedIn && currentUser?.id !== video.userId && (
+                  <ReportVideoDialog videoId={videoId} />
+                )}
+              </div>
+            </div>
+
 
             {/* Description */}
             {video.description && (

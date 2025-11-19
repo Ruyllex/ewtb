@@ -7,6 +7,7 @@ import { monetizationRouter } from "@/modules/monetization/server/procedures";
 import { usersRouter } from "@/modules/users/server/procedures";
 import { channelsRouter } from "@/modules/channels/server/procedures";
 import { commentsRouter } from "@/modules/comments/server/procedures";
+import { reportsRouter } from "@/modules/reports/server/procedures";
 import { createTRPCRouter } from "../init";
 
 export const appRouter = createTRPCRouter({
@@ -19,6 +20,7 @@ export const appRouter = createTRPCRouter({
   users: usersRouter,
   channels: channelsRouter,
   comment: commentsRouter,
+  reports: reportsRouter,
 });
 // export type definition of API
 export type AppRouter = typeof appRouter;

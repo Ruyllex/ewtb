@@ -7,7 +7,9 @@ import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+
 import { Check, XCircle, ShieldCheckIcon, Users, Video, TrendingUp } from "lucide-react";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -96,9 +98,17 @@ export const AdminDashboardView = () => {
 
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">
-      <div className="flex items-center gap-3 mb-6">
-        <ShieldCheckIcon className="h-8 w-8 text-blue-500" />
-        <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <ShieldCheckIcon className="h-8 w-8 text-blue-500" />
+          <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
+        </div>
+        <Button asChild variant="outline" className="gap-2">
+          <Link href="/admin/reports">
+            <AlertTriangle className="h-4 w-4" />
+            Ver Reportes
+          </Link>
+        </Button>
       </div>
 
       <div className="mb-8">

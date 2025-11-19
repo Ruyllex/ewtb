@@ -51,6 +51,14 @@ export const userRelations = relations(users, ({ many, one }) => ({
   }),
   liveStreams: many(liveStreams),
   comments: many(comments),
+  reports: many(reports),
+  reviewedReports: many(reports, {
+    relationName: "reviewer",
+  }),
+  userActions: many(userActions),
+  createdUserActions: many(userActions, {
+    relationName: "actionCreator",
+  }),
 }));
 
 export const categories = pgTable(
@@ -69,7 +77,19 @@ export const categoryRelations = relations(categories, ({ many }) => ({
   videos: many(videos),
 }));
 
-export const videoVisibility = pgEnum("video_visibility", ["public", "private"]);
+export const videoVisibility = pgEnum("video_visibility", ["public", "private", "restricted", "hidden"]);
+export const reportStatus = pgEnum("report_status", ["pending", "valid", "invalid", "resolved"]);
+export const reportAction = pgEnum("report_action", [
+  "no_action",
+  "video_hidden",
+  "video_deleted",
+  "video_restricted",
+  "user_warned",
+  "user_suspended",
+  "user_banned",
+  "reporter_penalized",
+]);
+export const userActionType = pgEnum("user_action_type", ["warning", "suspension", "ban"]);
 
 export const videos = pgTable("videos", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -142,6 +162,7 @@ export const videoRelations = relations(videos, ({ one, many }) => ({
   }),
   views: many(views),
   comments: many(comments),
+  reports: many(reports),
 }));
 
 export const views = pgTable("views", {
@@ -369,5 +390,75 @@ export const commentRelations = relations(comments, ({ one, many }) => ({
   }),
   replies: many(comments, {
     relationName: "replies",
+  }),
+}));
+
+// Tabla de reportes de videos
+export const reports = pgTable("reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  videoId: uuid("video_id")
+    .references(() => videos.id, { onDelete: "cascade" })
+    .notNull(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  reason: text("reason").notNull(),
+  status: reportStatus("status").default("pending").notNull(),
+  adminAction: reportAction("admin_action"),
+  adminNotes: text("admin_notes"), // Notas internas del admin
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }), // Admin que revisó
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const reportRelations = relations(reports, ({ one }) => ({
+  video: one(videos, {
+    fields: [reports.videoId],
+    references: [videos.id],
+  }),
+  user: one(users, {
+    fields: [reports.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [reports.reviewedBy],
+    references: [users.id],
+    relationName: "reviewer",
+  }),
+}));
+
+// Tabla de acciones sobre usuarios (warnings, suspensions, bans)
+export const userActions = pgTable("user_actions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  actionType: userActionType("action_type").notNull(),
+  reason: text("reason").notNull(),
+  reportId: uuid("report_id").references(() => reports.id, { onDelete: "set null" }), // Reporte relacionado
+  duration: integer("duration"), // Duración en días (null = permanente)
+  expiresAt: timestamp("expires_at"), // Fecha de expiración (null = permanente)
+  isActive: boolean("is_active").default(true).notNull(),
+  createdBy: uuid("created_by")
+    .references(() => users.id, { onDelete: "set null" })
+    .notNull(), // Admin que creó la acción
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const userActionRelations = relations(userActions, ({ one }) => ({
+  user: one(users, {
+    fields: [userActions.userId],
+    references: [users.id],
+  }),
+  report: one(reports, {
+    fields: [userActions.reportId],
+    references: [reports.id],
+  }),
+  creator: one(users, {
+    fields: [userActions.createdBy],
+    references: [users.id],
+    relationName: "actionCreator",
   }),
 }));
