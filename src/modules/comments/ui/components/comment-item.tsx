@@ -22,6 +22,7 @@ interface Comment {
   texto: string;
   fecha: Date;
   parentId?: string | null;
+  replyCount?: number;
   user: {
     id: string;
     name: string;
@@ -56,7 +57,9 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
   });
 
   const replies = repliesData?.items || [];
-  const hasReplies = replies.length > 0;
+  // Usar replyCount del comentario si está disponible, sino usar el conteo de respuestas cargadas
+  const replyCount = comment.replyCount ?? replies.length;
+  const hasReplies = replyCount > 0;
 
   // Suscribirse a eventos de Pusher para respuestas en tiempo real
   useEffect(() => {
@@ -191,12 +194,12 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
                 {showReplies ? (
                   <>
                     <ChevronUp className="h-3 w-3 mr-1" />
-                    Ocultar {replies.length} {replies.length === 1 ? "respuesta" : "respuestas"}
+                    Ocultar {replyCount} {replyCount === 1 ? "respuesta" : "respuestas"}
                   </>
                 ) : (
                   <>
                     <ChevronDown className="h-3 w-3 mr-1" />
-                    Ver {replies.length} {replies.length === 1 ? "respuesta" : "respuestas"}
+                    Ver {replyCount} {replyCount === 1 ? "respuesta" : "respuestas"}
                   </>
                 )}
               </Button>

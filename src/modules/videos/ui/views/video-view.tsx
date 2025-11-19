@@ -9,6 +9,7 @@ import Link from "next/link";
 import { formatDuration } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
+import { ReportVideoDialog } from "../components/report-video-dialog";
 import { Button } from "@/components/ui/button";
 import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -211,6 +212,9 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                     <CrownIcon className="size-4" />
                     Apoyar
                   </Button>
+                )}
+                {isSignedIn && currentUser?.id !== video.userId && (
+                  <ReportVideoDialog videoId={videoId} />
                 )}
               </div>
             </div>

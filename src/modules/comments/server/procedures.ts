@@ -149,6 +149,11 @@ export const commentsRouter = createTRPCRouter({
             username: users.username,
             imageUrl: users.imageUrl,
           },
+          replyCount: sql<number>`(
+            SELECT COUNT(*)::int
+            FROM comments replies
+            WHERE replies.parent_id = ${comments.id}
+          )`,
         })
         .from(comments)
         .innerJoin(users, eq(comments.userId, users.id))
