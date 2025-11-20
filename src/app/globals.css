@@ -349,190 +349,55 @@ body {
   background-color: rgba(255, 255, 255, 0.2) !important;
 }
 
-/* Estilos para el componente de "manage account" de Clerk (cl-userProfile-root) */
-.cl-rootBox.cl-userProfile-root {
-  background: rgba(15, 16, 37, 0.95) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-radius: 0.5rem !important;
-  box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.3), 0 4px 8px -2px rgba(0, 0, 0, 0.2) !important;
-  color: #FFFFFF !important;
+/* Estilos para el componente de perfil de usuario de Clerk (cl-userProfile-root) */
+.cl-rootBox.cl-userProfile-root,
+.cl-userProfile-root {
+  /* Texto negro en el componente de perfil */
 }
 
-/* Fondo del modal/overlay */
-.cl-rootBox.cl-userProfile-root::before,
-.cl-rootBox.cl-userProfile-root [class*="cl-modalContent"],
-.cl-rootBox.cl-userProfile-root [class*="cl-card"] {
-  background: rgba(15, 16, 37, 0.95) !important;
-  backdrop-filter: blur(16px) !important;
-  -webkit-backdrop-filter: blur(16px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #FFFFFF !important;
-}
-
-/* Texto blanco en todo el componente de manage account */
 .cl-rootBox.cl-userProfile-root *,
 .cl-userProfile-root * {
-  color: #FFFFFF !important;
+  color: #000000 !important;
 }
 
-/* Iconos blancos */
+/* Iconos negros en el componente de perfil */
 .cl-rootBox.cl-userProfile-root svg,
 .cl-userProfile-root svg {
-  color: #FFFFFF !important;
-  fill: #FFFFFF !important;
-  stroke: #FFFFFF !important;
-}
-
-/* Títulos y textos */
-.cl-rootBox.cl-userProfile-root h1,
-.cl-rootBox.cl-userProfile-root h2,
-.cl-rootBox.cl-userProfile-root h3,
-.cl-rootBox.cl-userProfile-root h4,
-.cl-rootBox.cl-userProfile-root h5,
-.cl-rootBox.cl-userProfile-root h6,
-.cl-rootBox.cl-userProfile-root p,
-.cl-rootBox.cl-userProfile-root span,
-.cl-rootBox.cl-userProfile-root div,
-.cl-rootBox.cl-userProfile-root label,
-.cl-userProfile-root h1,
-.cl-userProfile-root h2,
-.cl-userProfile-root h3,
-.cl-userProfile-root h4,
-.cl-userProfile-root h5,
-.cl-userProfile-root h6,
-.cl-userProfile-root p,
-.cl-userProfile-root span,
-.cl-userProfile-root div,
-.cl-userProfile-root label {
-  color: #FFFFFF !important;
-}
-
-/* Enlaces */
-.cl-rootBox.cl-userProfile-root a,
-.cl-userProfile-root a {
-  color: #FFFFFF !important;
-}
-
-.cl-rootBox.cl-userProfile-root a:hover,
-.cl-userProfile-root a:hover {
-  color: #5ADBFD !important;
-}
-
-/* Botones */
-.cl-rootBox.cl-userProfile-root button,
-.cl-userProfile-root button {
-  color: #FFFFFF !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-}
-
-.cl-rootBox.cl-userProfile-root button:hover,
-.cl-userProfile-root button:hover {
-  background: rgba(90, 219, 253, 0.15) !important;
-  border-color: #5ADBFD !important;
-  color: #FFFFFF !important;
-}
-
-.cl-rootBox.cl-userProfile-root button[type="submit"],
-.cl-userProfile-root button[type="submit"],
-.cl-rootBox.cl-userProfile-root button[class*="primary"],
-.cl-userProfile-root button[class*="primary"] {
-  background: #5ADBFD !important;
   color: #000000 !important;
-  border-color: #5ADBFD !important;
+  fill: #000000 !important;
+  stroke: #000000 !important;
 }
 
-.cl-rootBox.cl-userProfile-root button[type="submit"]:hover,
-.cl-userProfile-root button[type="submit"]:hover,
-.cl-rootBox.cl-userProfile-root button[class*="primary"]:hover,
-.cl-userProfile-root button[class*="primary"]:hover {
-  background: #4AD0F0 !important;
-  border-color: #4AD0F0 !important;
-}
-
-/* Inputs y campos de formulario */
+/* Asegurar que todos los elementos dentro tengan texto negro */
+.cl-rootBox.cl-userProfile-root a,
+.cl-userProfile-root a,
+.cl-rootBox.cl-userProfile-root button,
+.cl-userProfile-root button,
+.cl-rootBox.cl-userProfile-root span,
+.cl-userProfile-root span,
+.cl-rootBox.cl-userProfile-root div,
+.cl-userProfile-root div,
+.cl-rootBox.cl-userProfile-root p,
+.cl-userProfile-root p,
+.cl-rootBox.cl-userProfile-root label,
+.cl-userProfile-root label,
+.cl-rootBox.cl-userProfile-root h1,
+.cl-userProfile-root h1,
+.cl-rootBox.cl-userProfile-root h2,
+.cl-userProfile-root h2,
+.cl-rootBox.cl-userProfile-root h3,
+.cl-userProfile-root h3,
 .cl-rootBox.cl-userProfile-root input,
-.cl-rootBox.cl-userProfile-root textarea,
-.cl-rootBox.cl-userProfile-root select,
 .cl-userProfile-root input,
-.cl-userProfile-root textarea,
-.cl-userProfile-root select {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #FFFFFF !important;
+.cl-rootBox.cl-userProfile-root textarea,
+.cl-userProfile-root textarea {
+  color: #000000 !important;
 }
 
+/* Placeholders en inputs también negros */
 .cl-rootBox.cl-userProfile-root input::placeholder,
-.cl-rootBox.cl-userProfile-root textarea::placeholder,
 .cl-userProfile-root input::placeholder,
+.cl-rootBox.cl-userProfile-root textarea::placeholder,
 .cl-userProfile-root textarea::placeholder {
-  color: rgba(255, 255, 255, 0.6) !important;
-}
-
-.cl-rootBox.cl-userProfile-root input:focus,
-.cl-rootBox.cl-userProfile-root textarea:focus,
-.cl-rootBox.cl-userProfile-root select:focus,
-.cl-userProfile-root input:focus,
-.cl-userProfile-root textarea:focus,
-.cl-userProfile-root select:focus {
-  outline: 2px solid #5ADBFD !important;
-  outline-offset: 2px !important;
-  border-color: #5ADBFD !important;
-  ring-color: #5ADBFD !important;
-}
-
-/* Separadores */
-.cl-rootBox.cl-userProfile-root hr,
-.cl-rootBox.cl-userProfile-root [role="separator"],
-.cl-userProfile-root hr,
-.cl-userProfile-root [role="separator"] {
-  border-color: rgba(255, 255, 255, 0.2) !important;
-  background-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-/* Tabs y navegación */
-.cl-rootBox.cl-userProfile-root [role="tab"],
-.cl-userProfile-root [role="tab"] {
-  color: rgba(255, 255, 255, 0.7) !important;
-  border-color: rgba(255, 255, 255, 0.2) !important;
-}
-
-.cl-rootBox.cl-userProfile-root [role="tab"][aria-selected="true"],
-.cl-userProfile-root [role="tab"][aria-selected="true"] {
-  color: #FFFFFF !important;
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: #5ADBFD !important;
-}
-
-.cl-rootBox.cl-userProfile-root [role="tab"]:hover,
-.cl-userProfile-root [role="tab"]:hover {
-  color: #FFFFFF !important;
-  background: rgba(90, 219, 253, 0.1) !important;
-}
-
-/* Cards y contenedores */
-.cl-rootBox.cl-userProfile-root [class*="cl-card"],
-.cl-userProfile-root [class*="cl-card"],
-.cl-rootBox.cl-userProfile-root [class*="cl-section"],
-.cl-userProfile-root [class*="cl-section"] {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: #FFFFFF !important;
-}
-
-/* Badges y etiquetas */
-.cl-rootBox.cl-userProfile-root [class*="cl-badge"],
-.cl-userProfile-root [class*="cl-badge"] {
-  background: rgba(90, 219, 253, 0.2) !important;
-  color: #FFFFFF !important;
-  border: 1px solid rgba(90, 219, 253, 0.3) !important;
-}
-
-/* Focus states generales */
-.cl-rootBox.cl-userProfile-root *:focus-visible,
-.cl-userProfile-root *:focus-visible {
-  outline: 2px solid #5ADBFD !important;
-  outline-offset: 2px !important;
+  color: rgba(0, 0, 0, 0.6) !important;
 }

@@ -94,7 +94,7 @@ export const AdminDashboardView = () => {
           <ShieldCheckIcon className="h-8 w-8 text-[#5ADBFD]" />
           <h1 className="text-3xl font-bold text-white">Dashboard Administrativo</h1>
         </div>
-        <Button asChild variant="outline" className="gap-2 border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]">
+        <Button asChild variant="outline" className="gap-2 border-[#5ADBFD] text-[#5ADBFD] hover:bg-[#5ADBFD] hover:text-black transition-colors">
           <Link href="/admin/reports">
             <span className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -168,7 +168,7 @@ export const AdminDashboardView = () => {
                         variant="outline"
                         size="sm"
                         asChild
-                        className="flex-1 border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]"
+                        className="flex-1 border-[#5ADBFD] text-[#5ADBFD] hover:bg-[#5ADBFD] hover:text-black transition-colors"
                       >
                         <Link href={`/channel/${channel.userUsername || ""}`}>
                           Ver Canal
@@ -180,7 +180,7 @@ export const AdminDashboardView = () => {
                           size="sm"
                           onClick={() => unverifyChannel.mutate({ channelId: channel.id })}
                           disabled={unverifyChannel.isPending}
-                          className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                          className="border-red-500/70 text-red-400 hover:bg-red-500/20 hover:border-red-500 hover:text-red-300 transition-colors disabled:opacity-50"
                         >
                           <XCircle className="h-4 w-4 mr-2" />
                           Desverificar
@@ -191,12 +191,12 @@ export const AdminDashboardView = () => {
                           size="sm"
                           onClick={() => verifyChannel.mutate({ channelId: channel.id })}
                           disabled={verifyChannel.isPending}
-                          className="bg-[#5ADBFD] text-white hover:bg-[#5ADBFD]/80"
+                          className="bg-[#5ADBFD] text-black hover:bg-[#4AD0F0] transition-colors disabled:opacity-50 font-medium"
                         >
                          {/* Contenido agrupado en un span para prevenir errores de múltiples hijos */}
                           <span className="flex items-center gap-2"> 
-                            <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                              <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                            <div className="h-5 w-5 rounded-full bg-black/10 flex items-center justify-center shrink-0">
+                              <Check className="h-3.5 w-3.5 text-black stroke-[3]" />
                             </div>
                             Verificar
                           </span>
