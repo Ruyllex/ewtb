@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { videoLikes, users } from "@/db/schema";
+import { videoLikes, users, videos } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq, sql } from "drizzle-orm";
@@ -24,6 +24,12 @@ export const likesRouter = createTRPCRouter({
         await db
           .delete(videoLikes)
           .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, userId)));
+
+        await db
+          .update(videos)
+          .set({ likes: sql<number>`GREATEST(${videos.likes} - 1, 0)` })
+          .where(eq(videos.id, input.videoId));
+
         return { liked: false };
       } else {
         // Insertar like
@@ -31,6 +37,12 @@ export const likesRouter = createTRPCRouter({
           videoId: input.videoId,
           userId,
         });
+
+        await db
+          .update(videos)
+          .set({ likes: sql<number>`GREATEST(${videos.likes} + 1, 0)` })
+          .where(eq(videos.id, input.videoId));
+
         return { liked: true };
       }
     }),

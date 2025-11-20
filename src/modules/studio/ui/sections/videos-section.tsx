@@ -103,7 +103,9 @@ export const VideosSectionSuspense = () => {
     }
   );
 
-  const shouldPoll = videos.pages.some((page) =>
+  const videoPages = videos?.pages ?? [];
+
+  const shouldPoll = videoPages.some((page) =>
     page.items.some(
       (video) =>
         [video.muxStatus, video.muxTrackStatus].some((status) => status && status !== "ready") ||
@@ -140,7 +142,7 @@ export const VideosSectionSuspense = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {videos.pages
+            {videoPages
               .flatMap((page) => page.items)
               .map((video) => (
                 <TableRow key={video.id} className="cursor-pointer">

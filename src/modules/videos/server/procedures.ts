@@ -540,26 +540,7 @@ export const videosRouter = createTRPCRouter({
           userId = user?.id || null;
         }
 
-        // Check if view already exists (prevent duplicate views from same user)
-        if (userId) {
-          try {
-            const existingView = await db
-              .select()
-              .from(views)
-              .where(and(eq(views.videoId, input.videoId), eq(views.userId, userId)))
-              .limit(1);
-
-            if (existingView.length > 0) {
-              return { success: true, alreadyViewed: true };
-            }
-          } catch (error) {
-            // Si la tabla views no existe, simplemente retornar success sin registrar
-            console.warn("Error checking existing view (table may not exist):", error);
-            return { success: true, skipped: true };
-          }
-        }
-
-        // Record the view
+        // Record the view (permitimos múltiples vistas por usuario)
         try {
           await db.insert(views).values({
             videoId: input.videoId,
