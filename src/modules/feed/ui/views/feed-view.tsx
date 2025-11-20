@@ -25,16 +25,24 @@ const VideoCardSkeleton = () => (
 
 export const FeedView = () => {
   const { isSignedIn } = useAuth();
-  // Inicializar siempre con "global" para evitar problemas de hidratación
-  // Luego actualizar a "personal" si el usuario está autenticado
-  const [activeTab, setActiveTab] = useState<"personal" | "global">("global");
   const [isMounted, setIsMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<"personal" | "global">("global");
 
-  // Actualizar el tab después de la hidratación
+  // Actualizar el tab después de la hidratación basado en query params y estado de autenticación
   useEffect(() => {
     setIsMounted(true);
-    if (isSignedIn) {
+    
+    // Verificar si hay un query param para el tab
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get("tab");
+    
+    if (tabParam === "personal" && isSignedIn) {
       setActiveTab("personal");
+    } else if (isSignedIn && !tabParam) {
+      // Si está autenticado y no hay tab específico, usar personal por defecto
+      setActiveTab("personal");
+    } else {
+      setActiveTab("global");
     }
   }, [isSignedIn]);
 
@@ -54,6 +62,7 @@ export const FeedView = () => {
   );
 
   // Feed global: todos los videos públicos
+  // Siempre habilitado para que se cargue incluso si el tab no está activo
   const {
     data: globalFeedData,
     hasNextPage: hasNextGlobalPage,
@@ -64,7 +73,8 @@ export const FeedView = () => {
     { limit: 20 },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
-      enabled: activeTab === "global",
+      enabled: isMounted, // Habilitar después de montar para evitar problemas de hidratación
+      staleTime: 30000, // Cache por 30 segundos
     }
   );
 
@@ -86,6 +96,32 @@ export const FeedView = () => {
       fetchNextGlobalPage();
     }
   };
+
+  // No renderizar los Tabs hasta que el componente esté montado para evitar errores de hidratación
+  if (!isMounted) {
+    return (
+      <div className="max-w-[2400px] mx-auto px-4 py-6">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Feed</h1>
+          <p className="text-muted-foreground">
+            Descubre videos de tus canales favoritos y explora contenido nuevo
+          </p>
+        </div>
+        <div className="inline-flex h-10 items-center justify-center rounded-md bg-transparent border border-white/20 p-1 text-white/70">
+          <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-white/70">
+            Feed Global
+          </div>
+        </div>
+        <div className="mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <VideoCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">

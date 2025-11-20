@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2Icon, SaveIcon, CalendarIcon, UserIcon, ImageIcon, Image as ImageIcon2 } from "lucide-react";
+import { Loader2Icon, SaveIcon, CalendarIcon, UserIcon, ImageIcon, Image as ImageIcon2, DollarSignIcon, AlertCircleIcon, CheckCircleIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -14,15 +14,22 @@ import { es } from "date-fns/locale/es";
 import { UploadButton } from "@/lib/uploadthing";
 import Image from "next/image";
 import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
+import { ResponsiveModal } from "@/components/responsive-dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 export const SettingsView = () => {
   const queryClient = useQueryClient();
   const { data: profile, isLoading } = api.users.getProfile.useQuery();
   const { data: channel, isLoading: isLoadingChannel } = api.channels.getMyChannel.useQuery();
+  const { data: monetizationStatus, refetch: refetchMonetizationStatus } = api.monetization.getMonetizationRequestStatus.useQuery();
+  const { data: connectStatus } = api.monetization.getConnectStatus.useQuery();
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [username, setUsername] = useState("");
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
+  const [showMonetizationModal, setShowMonetizationModal] = useState(false);
+  const [paypalEmail, setPaypalEmail] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   // Inicializar el campo de fecha de nacimiento cuando se carga el perfil
   useEffect(() => {
@@ -76,6 +83,20 @@ export const SettingsView = () => {
     },
     onError: (error) => {
       toast.error(error.message || "Error al actualizar el canal");
+    },
+  });
+
+  const requestMonetizationMutation = api.monetization.requestMonetization.useMutation({
+    onSuccess: () => {
+      toast.success("Solicitud de monetización enviada correctamente");
+      setShowMonetizationModal(false);
+      setPaypalEmail("");
+      setTermsAccepted(false);
+      refetchMonetizationStatus();
+      queryClient.invalidateQueries({ queryKey: api.monetization.getConnectStatus.queryKey() });
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al enviar la solicitud de monetización");
     },
   });
 
@@ -412,6 +433,95 @@ export const SettingsView = () => {
         </Card>
       )}
 
+      {/* Sección de Monetización */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSignIcon className="size-5" />
+            Monetización
+          </CardTitle>
+          <CardDescription>
+            Solicita la activación de la monetización para recibir pagos de tus contenidos
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {profile?.canMonetize ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                <CheckCircleIcon className="size-5" />
+                <p className="font-semibold">Monetización habilitada</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Tu cuenta está habilitada para recibir pagos. Puedes gestionar tus ganancias desde la sección de ganancias.
+              </p>
+              {connectStatus?.accountStatus && (
+                <p className="text-xs text-muted-foreground">
+                  Email PayPal: {connectStatus.accountStatus.id}
+                </p>
+              )}
+            </div>
+          ) : monetizationStatus?.status === "pending" ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+                <AlertCircleIcon className="size-5" />
+                <p className="font-semibold">Solicitud pendiente de revisión</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Tu solicitud de monetización está siendo revisada por el administrador. Te notificaremos cuando sea aprobada.
+              </p>
+              {monetizationStatus.paypalEmail && (
+                <p className="text-xs text-muted-foreground">
+                  Email PayPal registrado: {monetizationStatus.paypalEmail}
+                </p>
+              )}
+            </div>
+          ) : monetizationStatus?.status === "rejected" ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <AlertCircleIcon className="size-5" />
+                <p className="font-semibold">Solicitud rechazada</p>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {monetizationStatus.rejectionReason || "Tu solicitud de monetización fue rechazada."}
+              </p>
+              <Button
+                onClick={() => setShowMonetizationModal(true)}
+                size="sm"
+              >
+                Volver a solicitar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Solicita la activación de la monetización para comenzar a recibir pagos. Deberás proporcionar tu email de PayPal y aceptar los términos de monetización.
+              </p>
+              {connectStatus?.monetizationCheck?.reasons && connectStatus.monetizationCheck.reasons.length > 0 && (
+                <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
+                    Nota: Requisitos pendientes para monetizar (puedes solicitar de todas formas):
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    {connectStatus.monetizationCheck.reasons.map((reason, index) => (
+                      <li key={index}>{reason}</li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                    El administrador revisará tu solicitud y podrá aprobarla o solicitarte que cumplas con estos requisitos.
+                  </p>
+                </div>
+              )}
+              <Button
+                onClick={() => setShowMonetizationModal(true)}
+              >
+                <DollarSignIcon className="size-4 mr-2" />
+                Solicitar Monetización
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {profile?.canMonetize && (
         <Card className="border-green-200 bg-green-50 dark:bg-green-950 dark:border-green-900">
           <CardHeader>
@@ -425,6 +535,93 @@ export const SettingsView = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Modal de Solicitud de Monetización */}
+      <ResponsiveModal
+        title="Solicitar Monetización"
+        open={showMonetizationModal}
+        onOpenChange={setShowMonetizationModal}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="paypal-email">Email de PayPal</Label>
+            <Input
+              id="paypal-email"
+              type="email"
+              placeholder="tu-email@paypal.com"
+              value={paypalEmail}
+              onChange={(e) => setPaypalEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              El email debe estar asociado a una cuenta de PayPal válida donde recibirás los pagos.
+            </p>
+          </div>
+
+          <div className="space-y-4 bg-muted p-4 rounded-lg dark:bg-muted/10">
+            <p className="text-sm font-semibold">Términos de Monetización</p>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>Al solicitar la monetización, aceptas los siguientes términos:</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                <li>La plataforma retendrá una comisión del 3% sobre las ganancias generadas.</li>
+                <li>Los pagos se procesarán a través de PayPal.</li>
+                <li>Debes cumplir con todos los requisitos de edad y contenido para monetizar.</li>
+                <li>La plataforma se reserva el derecho de rechazar solicitudes que no cumplan con las políticas.</li>
+              </ul>
+            </div>
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-[#5ADBFD] focus:ring-[#5ADBFD]"
+              />
+              <Label htmlFor="terms" className="text-sm cursor-pointer">
+                Acepto los términos de monetización y la comisión del 3% aplicada por la plataforma.
+              </Label>
+            </div>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowMonetizationModal(false);
+                setPaypalEmail("");
+                setTermsAccepted(false);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                if (!paypalEmail || !paypalEmail.includes("@")) {
+                  toast.error("Por favor, ingresa un email de PayPal válido");
+                  return;
+                }
+                if (!termsAccepted) {
+                  toast.error("Debes aceptar los términos de monetización");
+                  return;
+                }
+                requestMonetizationMutation.mutate({
+                  paypalEmail,
+                  termsAccepted,
+                });
+              }}
+              disabled={requestMonetizationMutation.isPending || !paypalEmail || !termsAccepted}
+            >
+              {requestMonetizationMutation.isPending ? (
+                <>
+                  <Loader2Icon className="size-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                "Enviar Solicitud"
+              )}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 };

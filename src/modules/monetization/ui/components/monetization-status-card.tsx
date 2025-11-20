@@ -77,7 +77,7 @@ export const MonetizationStatusCard = () => {
             ? "Tu cuenta está lista para recibir pagos de tips y suscripciones."
             : connectStatus.connected
               ? "Completa la verificación para habilitar la monetización."
-              : "Conecta tu cuenta de Stripe para comenzar a monetizar tu contenido."}
+              : "Conecta tu cuenta de PayPal para comenzar a monetizar tu contenido."}
         </CardDescription>
       </CardHeader>
       {!connectStatus.canMonetize && (
@@ -87,25 +87,25 @@ export const MonetizationStatusCard = () => {
               <Button
                 onClick={async () => {
                   try {
-                    const response = await fetch("/api/stripe/connect", {
+                    const response = await fetch("/api/paypal/connect", {
                       method: "POST",
                     });
 
                     if (!response.ok) {
                       const error = await response.json();
-                      throw new Error(error.error || "Error al conectar Stripe");
+                      throw new Error(error.error || "Error al conectar PayPal");
                     }
 
                     const data = await response.json();
                     window.location.href = data.url;
                   } catch (error) {
-                    console.error("Error conectando Stripe:", error);
+                    console.error("Error conectando PayPal:", error);
                   }
                 }}
                 size="sm"
               >
                 <ExternalLinkIcon className="size-4 mr-2" />
-                Conectar Stripe
+                Conectar PayPal
               </Button>
             ) : (
               <Button asChild size="sm" variant="outline">

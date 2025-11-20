@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
+import { TimeAgo } from "@/components/time-ago";
 import { VideoThumbnail } from "./video-thumbnail";
 import { THUMBNAIL_FALLBACK } from "../../constants";
 
@@ -138,7 +138,7 @@ export const VideoCard = ({
           ) : null}
 
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <span>{formatDistanceToNow(new Date(createdAt), { addSuffix: true })}</span>
+            <TimeAgo date={createdAt} />
           </div>
         </div>
       </div>

@@ -90,6 +90,7 @@ export const channelsRouter = createTRPCRouter({
           name: user.name,
           username: user.username,
           imageUrl: user.imageUrl,
+          canMonetize: user.canMonetize,
         },
         subscriberCount: Number(subscriberCount?.count || 0),
         videoCount: Number(videoCount?.count || 0),
@@ -398,13 +399,21 @@ getVideos: baseProcedure
     }
 
     // condiciones (paginación + visibilidad)
-    const whereConditions = [
+    const whereConditions: any[] = [
       eq(videos.userId, user.id),
-      !isOwner ? eq(videos.visibility, "public") : undefined,
-      input.cursor
-        ? sql`(${videos.createdAt} < ${input.cursor.createdAt} OR (${videos.createdAt} = ${input.cursor.createdAt} AND ${videos.id} < ${input.cursor.id}))`
-        : undefined,
-    ].filter(Boolean);
+    ];
+
+    // Si no es el owner, solo mostrar videos públicos
+    if (!isOwner) {
+      whereConditions.push(eq(videos.visibility, "public"));
+    }
+
+    // Agregar condición de cursor para paginación
+    if (input.cursor) {
+      whereConditions.push(
+        sql`(${videos.createdAt} < ${input.cursor.createdAt} OR (${videos.createdAt} = ${input.cursor.createdAt} AND ${videos.id} < ${input.cursor.id}))`
+      );
+    }
 
     // SELECT: traemos campos del video + campos del canal y del usuario (para fallback)
     const results = await db
@@ -430,7 +439,7 @@ getVideos: baseProcedure
       .from(videos)
       .innerJoin(users, eq(videos.userId, users.id))
       .leftJoin(channels, eq(channels.userId, users.id))
-      .where(whereConditions.length ? and(...(whereConditions as any)) : undefined)
+      .where(and(...whereConditions))
       .orderBy(desc(videos.createdAt), desc(videos.id))
       .limit(input.limit + 1);
 

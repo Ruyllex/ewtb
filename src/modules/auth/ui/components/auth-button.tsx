@@ -16,12 +16,14 @@ export const AuthButton = () => {
   }, []);
 
   // Verificar si el usuario es admin
-  const { data: isAdmin } = api.users.isAdmin.useQuery( // 🛑 CORRECCIÓN: Usamos .useQuery
-      undefined, // Si no toma parámetros, pasamos 'undefined'
-      {
-        enabled: mounted,
-      }
-    );
+  const { data: isAdmin, isLoading: isLoadingAdmin } = api.users.isAdmin.useQuery(
+    undefined,
+    {
+      enabled: mounted,
+      retry: false,
+      refetchOnWindowFocus: false,
+    }
+  );
 
   // Renderizar un placeholder durante SSR para evitar errores de hidratación
   if (!mounted) {
@@ -44,11 +46,11 @@ export const AuthButton = () => {
           <UserButton.MenuItems>
             {/* Todo: Add user profile menu button */}
             <UserButton.Link href="/studio" label="Studio" labelIcon={<ClapperboardIcon className="size-4" />} />
-            {isAdmin && (
-              <UserButton.Link 
-                href="/admin" 
-                label="Dashboard Admin" 
-                labelIcon={<ShieldCheckIcon className="size-4" />} 
+            {!isLoadingAdmin && isAdmin && (
+              <UserButton.Link
+                href="/admin"
+                label="Dashboard Admin"
+                labelIcon={<ShieldCheckIcon className="size-4" />}
               />
             )}
             <UserButton.Action label="manageAccount" />

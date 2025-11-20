@@ -20,11 +20,13 @@ export const users = pgTable(
     // Todo: add banner fields
     imageUrl: text("image_url").notNull(),
     // Campos de monetización
-    stripeAccountId: text("stripe_account_id").unique(), // ID de la cuenta de Stripe Connect
-    stripeAccountStatus: text("stripe_account_status"), // pending, active, restricted, etc.
+    paypalAccountId: text("paypal_account_id").unique(), // ID de la cuenta de PayPal
+    paypalAccountStatus: text("paypal_account_status"), // pending, active, restricted, etc.
     canMonetize: boolean("can_monetize").default(false).notNull(), // Flag para habilitar monetización
     dateOfBirth: timestamp("date_of_birth"), // Para verificar edad mínima
     isAdmin: boolean("is_admin").default(false).notNull(), // Flag para identificar administradores
+    // Moneda interna: Stars
+    starsBalance: decimal("stars_balance", { precision: 10, scale: 2 }).default("0").notNull(), // Saldo de Stars del usuario
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -39,6 +41,17 @@ export const userRelations = relations(users, ({ many, one }) => ({
   transactions: many(transactions),
   balance: one(balances),
   payouts: many(payouts),
+  monetizationRequests: many(monetizationRequests),
+  reviewedPayouts: many(payouts, {
+    relationName: "payoutReviewer",
+  }),
+  reviewedMonetizationRequests: many(monetizationRequests, {
+    relationName: "monetizationRequestReviewer",
+  }),
+  notifications: many(notifications),
+  relatedNotifications: many(notifications, {
+    relationName: "notificationRelatedUser",
+  }),
   channel: one(channels, {
     fields: [users.id],
     references: [channels.userId],
@@ -228,10 +241,13 @@ export const liveStreamRelations = relations(liveStreams, ({ one }) => ({
 }));
 
 // Enum para tipos de transacciones
-export const transactionType = pgEnum("transaction_type", ["tip", "subscription", "payout"]);
+export const transactionType = pgEnum("transaction_type", ["tip", "subscription", "payout", "stars_tip", "stars_purchase"]);
 
 // Enum para estados de transacciones
-export const transactionStatus = pgEnum("transaction_status", ["pending", "completed", "failed", "refunded"]);
+export const transactionStatus = pgEnum("transaction_status", ["pending", "completed", "failed", "refunded", "processing"]);
+
+// Enum para estados de solicitudes de monetización
+export const monetizationRequestStatus = pgEnum("monetization_request_status", ["pending", "approved", "rejected"]);
 
 // Tabla de transacciones
 export const transactions = pgTable("transactions", {
@@ -243,11 +259,12 @@ export const transactions = pgTable("transactions", {
   videoId: uuid("video_id").references(() => videos.id, { onDelete: "set null" }), // Video relacionado (para tips)
   type: transactionType("type").notNull(),
   status: transactionStatus("status").default("pending").notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Monto en centavos
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Monto en dólares o equivalente en USD
+  starsAmount: decimal("stars_amount", { precision: 10, scale: 2 }), // Cantidad de Stars (para tips con stars o compras)
   currency: text("currency").default("usd").notNull(),
-  stripePaymentIntentId: text("stripe_payment_intent_id").unique(), // ID del PaymentIntent de Stripe
-  stripeChargeId: text("stripe_charge_id"), // ID del cargo de Stripe
-  stripeSubscriptionId: text("stripe_subscription_id"), // ID de la suscripción (si aplica)
+  paypalOrderId: text("paypal_order_id").unique(), // ID de la orden de PayPal
+  paypalCaptureId: text("paypal_capture_id"), // ID de la captura de PayPal
+  paypalSubscriptionId: text("paypal_subscription_id"), // ID de la suscripción de PayPal (si aplica)
   description: text("description"), // Descripción de la transacción
   metadata: text("metadata"), // JSON con metadata adicional
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -270,18 +287,38 @@ export const balances = pgTable("balances", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Tabla de solicitudes de monetización
+export const monetizationRequests = pgTable("monetization_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(),
+  paypalEmail: text("paypal_email").notNull(), // Email de PayPal del usuario
+  termsAccepted: boolean("terms_accepted").default(false).notNull(), // Aceptación de términos
+  status: monetizationRequestStatus("status").default("pending").notNull(), // Estado de la solicitud
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }), // Admin que revisó
+  reviewedAt: timestamp("reviewed_at"), // Fecha de revisión
+  rejectionReason: text("rejection_reason"), // Razón del rechazo si aplica
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Tabla de retiros (payouts)
 export const payouts = pgTable("payouts", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),
-  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Monto a retirar
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // Monto solicitado a retirar
+  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).default("0").notNull(), // Comisión de la plataforma (3%)
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(), // Monto neto a pagar (amount - platformFee)
   currency: text("currency").default("usd").notNull(),
   status: transactionStatus("status").default("pending").notNull(),
-  stripePayoutId: text("stripe_payout_id").unique(), // ID del payout de Stripe
-  stripeTransferId: text("stripe_transfer_id"), // ID del transfer de Stripe
+  paypalPayoutId: text("paypal_payout_id").unique(), // ID del payout de PayPal
+  paypalTransferId: text("paypal_transfer_id"), // ID del transfer de PayPal
   failureReason: text("failure_reason"), // Razón del fallo si aplica
+  reviewedBy: uuid("reviewed_by").references(() => users.id, { onDelete: "set null" }), // Admin que revisó
+  reviewedAt: timestamp("reviewed_at"), // Fecha de revisión
   processedAt: timestamp("processed_at"), // Fecha de procesamiento
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -314,6 +351,23 @@ export const payoutRelations = relations(payouts, ({ one }) => ({
   user: one(users, {
     fields: [payouts.userId],
     references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [payouts.reviewedBy],
+    references: [users.id],
+    relationName: "payoutReviewer",
+  }),
+}));
+
+export const monetizationRequestRelations = relations(monetizationRequests, ({ one }) => ({
+  user: one(users, {
+    fields: [monetizationRequests.userId],
+    references: [users.id],
+  }),
+  reviewer: one(users, {
+    fields: [monetizationRequests.reviewedBy],
+    references: [users.id],
+    relationName: "monetizationRequestReviewer",
   }),
 }));
 
@@ -460,5 +514,55 @@ export const userActionRelations = relations(userActions, ({ one }) => ({
     fields: [userActions.createdBy],
     references: [users.id],
     relationName: "actionCreator",
+  }),
+}));
+
+// Tabla de notificaciones
+export const notificationType = pgEnum("notification_type", [
+  "donation_received",
+  "subscription_received",
+  "payout_approved",
+  "payout_rejected",
+  "monetization_approved",
+  "monetization_rejected",
+  "new_follower",
+  "video_liked",
+  "comment_reply",
+]);
+
+export const notifications = pgTable("notifications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .references(() => users.id, { onDelete: "cascade" })
+    .notNull(), // Usuario que recibe la notificación
+  type: notificationType("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  relatedUserId: uuid("related_user_id").references(() => users.id, { onDelete: "set null" }), // Usuario relacionado (ej: quien donó)
+  relatedVideoId: uuid("related_video_id").references(() => videos.id, { onDelete: "set null" }), // Video relacionado si aplica
+  relatedTransactionId: uuid("related_transaction_id").references(() => transactions.id, { onDelete: "set null" }), // Transacción relacionada si aplica
+  read: boolean("read").default(false).notNull(),
+  metadata: text("metadata"), // JSON con datos adicionales
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  relatedUser: one(users, {
+    fields: [notifications.relatedUserId],
+    references: [users.id],
+    relationName: "notificationRelatedUser",
+  }),
+  relatedVideo: one(videos, {
+    fields: [notifications.relatedVideoId],
+    references: [videos.id],
+  }),
+  relatedTransaction: one(transactions, {
+    fields: [notifications.relatedTransactionId],
+    references: [transactions.id],
   }),
 }));

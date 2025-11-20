@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/users/webhook",
   "/api/uploadthing",
   "/api/webhooks/stripe",
+  "/api/webhooks/paypal",
   "/monitoring", // Sentry tunnel route
 ]);
 

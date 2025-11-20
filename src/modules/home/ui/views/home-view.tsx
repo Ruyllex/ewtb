@@ -1,4 +1,4 @@
-import { StripeCheckoutButton } from "@/components/stripe-checkout-button";
+import { PayPalTestButton } from "@/components/paypal-test-button";
 import { CategoriesSection } from "../sections/categories-section";
 import { VideosGridSection } from "@/modules/videos/ui/sections/videos-grid-section";
 import { prefetch, trpc } from "@/trpc/server";
@@ -21,9 +21,9 @@ export const HomeView = async ({ categoryId }: HomeViewProps) => {
 
   return (
     <div className="max-w-[2400px] mx-auto mb-10 px-4 pt-2.5 flex flex-col gap-y-6">
-      {/* Botón de prueba de Stripe */}
+      {/* Botón de prueba de PayPal */}
       <div className="flex justify-center">
-        <StripeCheckoutButton />
+        <PayPalTestButton />
       </div>
       <CategoriesSection categoryId={categoryId} />
       <VideosGridSection categoryId={categoryId} />

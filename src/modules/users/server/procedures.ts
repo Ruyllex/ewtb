@@ -31,11 +31,11 @@ async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons:
     }
   }
 
-  // Verificar cuenta de Stripe
-  if (!user.stripeAccountId) {
-    reasons.push("Cuenta de Stripe Connect no vinculada");
-  } else if (user.stripeAccountStatus !== "active") {
-    reasons.push("Cuenta de Stripe Connect no activa");
+  // Verificar cuenta de PayPal
+  if (!user.paypalAccountId) {
+    reasons.push("Cuenta de PayPal no vinculada");
+  } else if (user.paypalAccountStatus !== "active") {
+    reasons.push("Cuenta de PayPal no activa");
   }
 
   // Verificar contenido mínimo
@@ -61,37 +61,62 @@ async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons:
  */
 async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<boolean> {
   // Primero verificar la columna isAdmin en la base de datos
-  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  const [user] = await db
+    .select({ isAdmin: users.isAdmin, clerkId: users.clerkId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
   
-  if (user?.isAdmin) {
+  // Si el usuario tiene isAdmin = true en la BD, retornar true inmediatamente
+  if (user?.isAdmin === true) {
+    console.log(`[isUserAdmin] Usuario ${userId} es admin según BD (isAdmin=true)`);
     return true;
   }
 
   // Si no está marcado como admin en la BD, verificar variable de entorno (retrocompatibilidad)
-  const adminUserIds = process.env.ADMIN_USER_IDS?.split(",").map((id) => id.trim()) || [];
+  // Limpiar espacios y filtrar valores vacíos
+  const adminUserIds = process.env.ADMIN_USER_IDS
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0) || [];
   
-  // Verificar por ID de usuario o Clerk ID
-  const isAdmin = 
-    adminUserIds.includes(userId) || 
-    (clerkUserId && adminUserIds.includes(clerkUserId));
+  if (adminUserIds.length === 0) {
+    console.log(`[isUserAdmin] No hay ADMIN_USER_IDS configurados`);
+    return false;
+  }
+
+  // Verificar por ID de usuario (UUID de la BD)
+  if (adminUserIds.includes(userId)) {
+    console.log(`[isUserAdmin] Usuario ${userId} encontrado en ADMIN_USER_IDS por UUID`);
+    return true;
+  }
+
+  // Verificar por Clerk ID
+  if (clerkUserId && adminUserIds.includes(clerkUserId)) {
+    console.log(`[isUserAdmin] Usuario ${clerkUserId} encontrado en ADMIN_USER_IDS por Clerk ID`);
+    return true;
+  }
 
   // Si no se encontró por ID, verificar por email (si está en la lista)
-  if (!isAdmin && clerkUserId) {
+  if (clerkUserId) {
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
       const clerkUser = await clerkClient.users.getUser(clerkUserId);
       if (clerkUser?.emailAddresses?.[0]?.emailAddress) {
         const userEmail = clerkUser.emailAddresses[0].emailAddress;
         if (adminUserIds.includes(userEmail)) {
+          console.log(`[isUserAdmin] Usuario ${userEmail} encontrado en ADMIN_USER_IDS por email`);
           return true;
         }
       }
-    } catch {
+    } catch (error) {
+      console.error(`[isUserAdmin] Error obteniendo email de Clerk:`, error);
       // Si no se puede obtener el email, continuar sin él
     }
   }
 
-  return isAdmin;
+  console.log(`[isUserAdmin] Usuario ${userId} (Clerk: ${clerkUserId}) NO es admin`);
+  return false;
 }
 
 export const usersRouter = createTRPCRouter({
@@ -100,7 +125,15 @@ export const usersRouter = createTRPCRouter({
    */
   isAdmin: protectedProcedure.query(async ({ ctx }) => {
     const { id: userId } = ctx.user;
-    return await isUserAdmin(userId, ctx.clerkUserId || null);
+    try {
+      console.log(`[isAdmin] Verificando admin para usuario: ${userId}, Clerk ID: ${ctx.clerkUserId}`);
+      const result = await isUserAdmin(userId, ctx.clerkUserId || null);
+      console.log(`[isAdmin] Resultado: ${result}`);
+      return result;
+    } catch (error) {
+      console.error("[isAdmin] Error checking admin status:", error);
+      return false;
+    }
   }),
 
   /**
@@ -121,8 +154,8 @@ export const usersRouter = createTRPCRouter({
       imageUrl: user.imageUrl,
       dateOfBirth: user.dateOfBirth,
       canMonetize: user.canMonetize,
-      stripeAccountId: user.stripeAccountId,
-      stripeAccountStatus: user.stripeAccountStatus,
+      paypalAccountId: user.paypalAccountId,
+      paypalAccountStatus: user.paypalAccountStatus,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };

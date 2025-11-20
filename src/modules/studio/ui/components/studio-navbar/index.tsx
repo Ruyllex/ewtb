@@ -1,8 +1,10 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthButton } from "@/modules/auth/ui/components/auth-button";
+import { StarsBalance } from "@/components/stars-balance";
 import Image from "next/image";
 import Link from "next/link";
 import { StudioUploadModal } from "../studio-upload-modal";
+import { SignedIn } from "@clerk/nextjs";
 
 export const StudioNavbar = () => {
   return (
@@ -13,8 +15,8 @@ export const StudioNavbar = () => {
           <SidebarTrigger />
 
           <Link href={"/studio"}>
-            <div className="flex items-center gap-1 p-4">
-              <Image src={"/logo.svg"} alt={"Logo"} width={32} height={16} priority />
+            <div className="flex items-center gap-2 p-4">
+              <Image src={"/logo.svg"} alt={"Logo"} width={40} height={40} priority />
               <p className="text-xl font-semibold tracking-tight text-white">FacuGo! Plus</p>
             </div>
           </Link>
@@ -23,6 +25,9 @@ export const StudioNavbar = () => {
         {/* Spacer */}
         <div className="flex-1" />
         <div className="flex-shrink-0 items-center flex gap-4 ">
+          <SignedIn>
+            <StarsBalance />
+          </SignedIn>
           <StudioUploadModal />
           <div className="size-8">
             <AuthButton />

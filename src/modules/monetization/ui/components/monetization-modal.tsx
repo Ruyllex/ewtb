@@ -6,31 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2Icon, HeartIcon, CrownIcon } from "lucide-react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Loader2Icon, HeartIcon, CrownIcon, Sparkles } from "lucide-react";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { toast } from "sonner";
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+import { api } from "@/trpc/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface MonetizationModalProps {
-  videoId: string;
+  videoId?: string;
   creatorId: string;
   creatorName: string;
+  liveStreamId?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 type MonetizationType = "tip" | "subscription" | null;
 
-// Componente interno para el formulario de tip que usa los hooks de Stripe
+// Componente interno para el formulario de tip que usa PayPal
 function TipPaymentForm({ 
   videoId, 
   creatorId, 
   creatorName, 
   amount, 
   message, 
-  clientSecret, 
+  orderId, 
   onSuccess 
 }: { 
   videoId: string; 
@@ -38,208 +38,188 @@ function TipPaymentForm({
   creatorName: string; 
   amount: string; 
   message: string; 
-  clientSecret: string; 
+  orderId: string; 
   onSuccess: () => void;
 }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements || !clientSecret) return;
-
-    setIsProcessing(true);
-
-    try {
-      // Primero validar y enviar los elementos del formulario
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        throw submitError;
-      }
-
-      // Luego confirmar el pago
-      const { error: confirmError } = await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: `${window.location.origin}/video/${videoId}?tip=success`,
-        },
-        redirect: "if_required",
-      });
-
-      if (confirmError) {
-        throw confirmError;
-      }
-
-      toast.success(`¡Tip de $${amount} enviado a ${creatorName}!`);
-      onSuccess();
-    } catch (error) {
-      console.error("Error procesando tip:", error);
-      toast.error(error instanceof Error ? error.message : "Error al procesar el tip");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  if (!paypalClientId) {
+    return (
+      <div className="text-center text-red-500">
+        PayPal no está configurado. Por favor, contacta al administrador.
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      <Button type="submit" disabled={!stripe || isProcessing} className="w-full">
-        {isProcessing ? (
-          <>
-            <Loader2Icon className="size-4 mr-2 animate-spin" />
-            Procesando...
-          </>
-        ) : (
-          `Enviar $${amount}`
-        )}
-      </Button>
-    </form>
+    <div className="space-y-4">
+      <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
+        <PayPalButtons
+          createOrder={(data, actions) => {
+            return Promise.resolve(orderId);
+          }}
+          onApprove={(data, actions) => {
+            return actions.order?.capture().then((details) => {
+              toast.success(`¡Tip de $${amount} enviado a ${creatorName}!`);
+              onSuccess();
+            });
+          }}
+          onError={(err) => {
+            console.error("Error en PayPal:", err);
+            toast.error("Error al procesar el pago con PayPal");
+          }}
+          style={{
+            layout: "vertical",
+            color: "blue",
+            shape: "rect",
+            label: "paypal",
+          }}
+        />
+      </PayPalScriptProvider>
+    </div>
   );
 }
 
-// Componente interno para el formulario de suscripción que usa los hooks de Stripe
+// Componente interno para el formulario de suscripción que usa PayPal
 function SubscriptionPaymentForm({ 
   creatorId, 
   creatorName, 
-  clientSecret, 
+  orderId, 
   onSuccess 
 }: { 
   creatorId: string; 
   creatorName: string; 
-  clientSecret: string; 
+  orderId: string; 
   onSuccess: () => void;
 }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements || !clientSecret) return;
-
-    setIsProcessing(true);
-
-    try {
-      // Primero validar y enviar los elementos del formulario
-      const { error: submitError } = await elements.submit();
-      if (submitError) {
-        throw submitError;
-      }
-
-      // Luego confirmar el pago
-      const { error: confirmError } = await stripe.confirmPayment({
-        elements,
-        clientSecret,
-        confirmParams: {
-          return_url: `${window.location.origin}/studio/earnings?subscription=success`,
-        },
-        redirect: "if_required",
-      });
-
-      if (confirmError) {
-        throw confirmError;
-      }
-
-      toast.success(`¡Suscripción a ${creatorName} activada!`);
-      onSuccess();
-    } catch (error) {
-      console.error("Error procesando suscripción:", error);
-      toast.error(error instanceof Error ? error.message : "Error al procesar la suscripción");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
+  if (!paypalClientId) {
+    return (
+      <div className="text-center text-red-500">
+        PayPal no está configurado. Por favor, contacta al administrador.
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      <Button type="submit" disabled={!stripe || isProcessing} className="w-full">
-        {isProcessing ? (
-          <>
-            <Loader2Icon className="size-4 mr-2 animate-spin" />
-            Procesando...
-          </>
-        ) : (
-          `Suscribirse por $3/mes`
-        )}
-      </Button>
-    </form>
+    <div className="space-y-4">
+      <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "USD" }}>
+        <PayPalButtons
+          createOrder={(data, actions) => {
+            return Promise.resolve(orderId);
+          }}
+          onApprove={(data, actions) => {
+            return actions.order?.capture().then((details) => {
+              toast.success(`¡Suscripción a ${creatorName} activada!`);
+              onSuccess();
+            });
+          }}
+          onError={(err) => {
+            console.error("Error en PayPal:", err);
+            toast.error("Error al procesar la suscripción con PayPal");
+          }}
+          style={{
+            layout: "vertical",
+            color: "blue",
+            shape: "rect",
+            label: "paypal",
+          }}
+        />
+      </PayPalScriptProvider>
+    </div>
   );
 }
 
-// Formulario inicial para tip (sin hooks de Stripe)
-function TipForm({ videoId, creatorId, creatorName, onClientSecret }: { 
-  videoId: string; 
+// Formulario para donar Stars
+function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess }: { 
+  videoId?: string; 
   creatorId: string; 
-  creatorName: string; 
-  onClientSecret: (clientSecret: string, amount: string, message: string) => void;
+  creatorName: string;
+  liveStreamId?: string;
+  onSuccess: () => void;
 }) {
-  const [amount, setAmount] = useState("5");
+  const [starsAmount, setStarsAmount] = useState("100");
   const [message, setMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: starsBalance } = api.monetization.getStarsBalance.useQuery();
+  const donateStars = api.monetization.donateStars.useMutation({
+    onSuccess: (data) => {
+      toast.success(`¡${data.starsDonated} Stars donadas a ${creatorName}!`);
+      // Invalidar queries para actualizar el balance de Stars
+      queryClient.invalidateQueries({ queryKey: [["monetization", "getStarsBalance"]] });
+      // Forzar refetch del balance de Stars inmediatamente
+      queryClient.refetchQueries({ queryKey: [["monetization", "getStarsBalance"]] });
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al donar Stars");
+    },
+  });
 
-  const handleCreateTip = async () => {
-    if (!amount || parseFloat(amount) < 1) {
-      toast.error("Ingresa un monto válido (mínimo $1)");
+  const handleDonate = () => {
+    const stars = parseInt(starsAmount);
+    
+    if (!stars || stars < 1) {
+      toast.error("Debes donar al menos 1 Star");
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      const response = await fetch("/api/stripe/tip", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          videoId,
-          amount: Math.round(parseFloat(amount) * 100), // Convertir a centavos
-          message,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Error al crear el tip");
-      }
-
-      const data = await response.json();
-      onClientSecret(data.clientSecret, amount, message);
-    } catch (error) {
-      console.error("Error creando tip:", error);
-      toast.error(error instanceof Error ? error.message : "Error al crear el tip");
-    } finally {
-      setIsLoading(false);
+    const availableStars = Math.floor(starsBalance?.stars || 0);
+    if (stars > availableStars) {
+      toast.error(`No tienes suficientes Stars. Disponibles: ${availableStars}`);
+      return;
     }
+
+    donateStars.mutate({
+      creatorId,
+      starsAmount: stars,
+      videoId,
+      liveStreamId,
+      message: message || undefined,
+    });
   };
+
+  const availableStars = Math.floor(starsBalance?.stars || 0);
+  const usdEquivalent = (parseInt(starsAmount || "0") / 100).toFixed(2);
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="amount">Monto (USD)</Label>
+        <Label htmlFor="stars-amount">
+          Cantidad de Stars
+          <span className="ml-2 text-xs text-muted-foreground">
+            (Disponibles: {availableStars.toLocaleString()})
+          </span>
+        </Label>
         <div className="flex gap-2">
-          {[1, 5, 10, 25, 50].map((value) => (
+          {[100, 500, 1000, 2500, 5000].map((value) => (
             <Button
               key={value}
               type="button"
-              variant={amount === value.toString() ? "default" : "outline"}
-              onClick={() => setAmount(value.toString())}
+              variant={starsAmount === value.toString() ? "default" : "outline"}
+              onClick={() => setStarsAmount(value.toString())}
               className="flex-1"
+              disabled={value > availableStars}
             >
-              ${value}
+              <Sparkles className="h-3 w-3 mr-1" />
+              {value.toLocaleString()}
             </Button>
           ))}
         </div>
         <Input
-          id="amount"
+          id="stars-amount"
           type="number"
           min="1"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="Ingresa un monto"
+          step="1"
+          value={starsAmount}
+          onChange={(e) => setStarsAmount(e.target.value)}
+          placeholder="Ingresa cantidad de Stars"
+          disabled={availableStars === 0}
         />
+        <p className="text-xs text-muted-foreground">
+          Equivalente: ${usdEquivalent} USD (100 Stars = $1 USD)
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -253,30 +233,41 @@ function TipForm({ videoId, creatorId, creatorName, onClientSecret }: {
         />
       </div>
 
-      <Button 
-        type="button" 
-        onClick={handleCreateTip} 
-        disabled={!amount || parseFloat(amount) < 1 || isLoading} 
-        className="w-full"
-      >
-        {isLoading ? (
-          <>
-            <Loader2Icon className="size-4 mr-2 animate-spin" />
-            Creando pago...
-          </>
-        ) : (
-          "Continuar con el pago"
-        )}
-      </Button>
+      {availableStars === 0 ? (
+        <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4">
+          <p className="text-sm text-yellow-800 dark:text-yellow-200 text-center">
+            No tienes Stars disponibles. Recarga Stars desde el navbar para poder donar.
+          </p>
+        </div>
+      ) : (
+        <Button 
+          type="button" 
+          onClick={handleDonate} 
+          disabled={!starsAmount || parseInt(starsAmount) < 1 || parseInt(starsAmount) > availableStars || donateStars.isPending} 
+          className="w-full"
+        >
+          {donateStars.isPending ? (
+            <>
+              <Loader2Icon className="size-4 mr-2 animate-spin" />
+              Donando...
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4 mr-2" />
+              Donar {parseInt(starsAmount || "0").toLocaleString()} Stars
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 }
 
-// Formulario inicial para suscripción (sin hooks de Stripe)
-function SubscriptionForm({ creatorId, creatorName, onClientSecret }: { 
+// Formulario inicial para suscripción (crea orden de PayPal)
+function SubscriptionForm({ creatorId, creatorName, onOrderId }: { 
   creatorId: string; 
   creatorName: string; 
-  onClientSecret: (clientSecret: string) => void;
+  onOrderId: (orderId: string) => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const subscriptionAmount = 3; // Monto fijo de $3
@@ -285,7 +276,7 @@ function SubscriptionForm({ creatorId, creatorName, onClientSecret }: {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/stripe/subscription", {
+      const response = await fetch("/api/paypal/subscription", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -300,7 +291,7 @@ function SubscriptionForm({ creatorId, creatorName, onClientSecret }: {
       }
 
       const data = await response.json();
-      onClientSecret(data.clientSecret);
+      onOrderId(data.orderId);
     } catch (error) {
       console.error("Error creando suscripción:", error);
       toast.error(error instanceof Error ? error.message : "Error al crear la suscripción");
@@ -336,10 +327,10 @@ function SubscriptionForm({ creatorId, creatorName, onClientSecret }: {
   );
 }
 
-export const MonetizationModal = ({ videoId, creatorId, creatorName, open, onOpenChange }: MonetizationModalProps) => {
+export const MonetizationModal = ({ videoId, creatorId, creatorName, liveStreamId, open, onOpenChange }: MonetizationModalProps) => {
   const [type, setType] = useState<MonetizationType>(null);
   const [mounted, setMounted] = useState(false);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
   const [tipData, setTipData] = useState<{ amount: string; message: string } | null>(null);
 
   useEffect(() => {
@@ -349,7 +340,7 @@ export const MonetizationModal = ({ videoId, creatorId, creatorName, open, onOpe
   useEffect(() => {
     if (!open) {
       setType(null);
-      setClientSecret(null);
+      setOrderId(null);
       setTipData(null);
     }
   }, [open]);
@@ -358,18 +349,18 @@ export const MonetizationModal = ({ videoId, creatorId, creatorName, open, onOpe
     return null;
   }
 
-  const handleTipClientSecret = (secret: string, amount: string, message: string) => {
-    setClientSecret(secret);
+  const handleTipOrderId = (id: string, amount: string, message: string) => {
+    setOrderId(id);
     setTipData({ amount, message });
   };
 
-  const handleSubscriptionClientSecret = (secret: string) => {
-    setClientSecret(secret);
+  const handleSubscriptionOrderId = (id: string) => {
+    setOrderId(id);
   };
 
   return (
     <ResponsiveModal
-      title={type === "tip" ? "💸 Enviar Donación" : type === "subscription" ? "👑 Suscribirse" : "Apoyar Creador"}
+      title={type === "tip" ? "⭐ Donar Stars" : type === "subscription" ? "👑 Suscribirse" : "Apoyar Creador"}
       open={open}
       onOpenChange={onOpenChange}
     >
@@ -384,10 +375,10 @@ export const MonetizationModal = ({ videoId, creatorId, creatorName, open, onOpe
                 className="h-auto py-6 flex flex-col items-center gap-2"
                 onClick={() => setType("tip")}
               >
-                <HeartIcon className="size-8 text-red-500" />
+                <Sparkles className="size-8 text-yellow-500" />
                 <div className="text-center">
-                  <div className="font-semibold">Donar</div>
-                  <div className="text-xs text-muted-foreground">Apoyo único</div>
+                  <div className="font-semibold">Donar Stars</div>
+                  <div className="text-xs text-muted-foreground">Apoyo único con Stars</div>
                 </div>
               </Button>
               <Button
@@ -404,51 +395,34 @@ export const MonetizationModal = ({ videoId, creatorId, creatorName, open, onOpe
               </Button>
             </div>
           </div>
-        ) : clientSecret && stripePromise ? (
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-              },
-            }}
-          >
-            {type === "tip" && tipData ? (
-              <TipPaymentForm
-                videoId={videoId}
-                creatorId={creatorId}
-                creatorName={creatorName}
-                amount={tipData.amount}
-                message={tipData.message}
-                clientSecret={clientSecret}
-                onSuccess={() => onOpenChange(false)}
-              />
-            ) : type === "subscription" ? (
+        ) : type === "tip" ? (
+          <StarsTipForm
+            videoId={videoId}
+            creatorId={creatorId}
+            creatorName={creatorName}
+            liveStreamId={liveStreamId}
+            onSuccess={() => onOpenChange(false)}
+          />
+        ) : orderId ? (
+          <>
+            {type === "subscription" ? (
               <SubscriptionPaymentForm
                 creatorId={creatorId}
                 creatorName={creatorName}
-                clientSecret={clientSecret}
+                orderId={orderId}
                 onSuccess={() => onOpenChange(false)}
               />
             ) : null}
-          </Elements>
+          </>
         ) : (
           <div>
-            {type === "tip" ? (
-              <TipForm 
-                videoId={videoId} 
-                creatorId={creatorId} 
-                creatorName={creatorName} 
-                onClientSecret={handleTipClientSecret}
-              />
-            ) : (
+            {type === "subscription" ? (
               <SubscriptionForm 
                 creatorId={creatorId} 
                 creatorName={creatorName} 
-                onClientSecret={handleSubscriptionClientSecret}
+                onOrderId={handleSubscriptionOrderId}
               />
-            )}
+            ) : null}
           </div>
         )}
       </div>

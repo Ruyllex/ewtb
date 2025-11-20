@@ -66,24 +66,24 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
   const queryClient = useQueryClient();
 
   const reviewReport = trpc.reports.reviewReport.useMutation({
-      onSuccess: () => {
-        queryClient.invalidateQueries();
-        toast.success("Reporte revisado exitosamente");
-        setOpen(false);
-        // Resetear formulario
-        setStatus("pending");
-        setAdminAction("no_action");
-        setAdminNotes("");
-        setVideoAction("keep");
-        setUserAction("none");
-        setUserActionReason("");
-        setSuspensionDays(7);
-        setPenalizeReporter(false);
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al revisar el reporte");
-      },
-    });
+    onSuccess: () => {
+      queryClient.invalidateQueries();
+      toast.success("Reporte revisado exitosamente");
+      setOpen(false);
+      // Resetear formulario
+      setStatus("pending");
+      setAdminAction("no_action");
+      setAdminNotes("");
+      setVideoAction("keep");
+      setUserAction("none");
+      setUserActionReason("");
+      setSuspensionDays(7);
+      setPenalizeReporter(false);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al revisar el reporte");
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,12 +104,12 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
       status === "invalid"
         ? "no_action"
         : videoAction === "keep" && userAction === "none"
-        ? "no_action"
-        : videoAction !== "keep"
-        ? `video_${videoAction === "delete" ? "deleted" : videoAction === "hide" ? "hidden" : "restricted"}`
-        : userAction !== "none"
-        ? `user_${userAction === "warning" ? "warned" : userAction === "suspension" ? "suspended" : "banned"}`
-        : "no_action";
+          ? "no_action"
+          : videoAction !== "keep"
+            ? `video_${videoAction === "delete" ? "deleted" : videoAction === "hide" ? "hidden" : "restricted"}`
+            : userAction !== "none"
+              ? `user_${userAction === "warning" ? "warned" : userAction === "suspension" ? "suspended" : "banned"}`
+              : "no_action";
 
     reviewReport.mutate({
       reportId: report.id,
@@ -119,16 +119,16 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
       videoAction:
         videoAction !== "keep"
           ? {
-              action: videoAction,
-            }
+            action: videoAction,
+          }
           : undefined,
       userAction:
         userAction !== "none"
           ? {
-              action: userAction,
-              reason: userActionReason.trim(),
-              duration: userAction === "suspension" ? suspensionDays : undefined,
-            }
+            action: userAction,
+            reason: userActionReason.trim(),
+            duration: userAction === "suspension" ? suspensionDays : undefined,
+          }
           : undefined,
       penalizeReporter: status === "invalid" && penalizeReporter ? true : undefined,
     });

@@ -8,11 +8,11 @@ import VideoPlayer from "../components/video-player";
 import { LikeSection } from "@/modules/likes/ui/components/like-section";
 import Image from "next/image";
 import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
+import { TimeAgo } from "@/components/time-ago";
 import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
 import { ReportVideoDialog } from "../components/report-video-dialog";
 import { Button } from "@/components/ui/button";
-import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2 } from "lucide-react";
+import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2, Sparkles } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { CommentsSection } from "@/modules/comments/ui/components/comments-section";
@@ -125,7 +125,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/70">
                     <span>{video.viewCount} views</span>
                     <span className="text-base">•</span>
-                    <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</span>
+                    <TimeAgo date={video.createdAt} />
                   </div>
                   <div className="rounded-full border px-3 py-1">
                     <LikeSection videoId={videoId} />
@@ -192,9 +192,8 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                   )}
                   {video.userCanMonetize && (
                     <Button variant="outline" onClick={() => setMonetizationOpen(true)} className="gap-2">
-                      <HeartIcon className="size-4" />
-                      <CrownIcon className="size-4" />
-                      Apoyar
+                      <Sparkles className="size-4 text-yellow-500" />
+                      Donar Stars
                     </Button>
                   )}
                   {isSignedIn && currentUser?.id !== video.userId && <ReportVideoDialog videoId={videoId} />}

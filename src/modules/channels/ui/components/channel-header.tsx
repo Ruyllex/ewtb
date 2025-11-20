@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { api as trpc } from "@/trpc/client"; 
 // 🛑 ELIMINADO: Ya no necesitamos importar useQuery ni useMutation de React Query
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Bell, BellOff } from "lucide-react"; 
+import { Check, Bell, BellOff, Sparkles } from "lucide-react"; 
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { UploadButton } from "@/lib/uploadthing";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
 
 interface ChannelHeaderProps {
   channel: {
@@ -27,6 +28,7 @@ interface ChannelHeaderProps {
       name: string;
       username: string | null;
       imageUrl: string;
+      canMonetize: boolean;
     };
     subscriberCount: number;
     videoCount: number;
@@ -41,6 +43,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
   const router = useRouter();
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
+  const [monetizationOpen, setMonetizationOpen] = useState(false);
 
   // 🛑 CORREGIDO: Uso de trpc.channels.isSubscribed.useQuery
   const { data: isSubscribed, isLoading: isLoadingSubscription } = trpc.channels.isSubscribed.useQuery(
@@ -195,28 +198,39 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                 <p className="text-sm text-muted-foreground max-w-2xl mt-2">{channel.description}</p>
               )}
             </div>
-            {/* Subscribe Button */}
+            {/* Subscribe and Support Buttons */}
             {isSignedIn && !isOwner && (
-              <Button
-                onClick={() => toggleSubscription.mutate({ channelId: channel.id })}
-                disabled={isLoadingSubscription || toggleSubscription.isPending}
-                variant={isSubscribed?.subscribed ? "outline" : "default"}
-                className="shrink-0"
-              >
-                {isLoadingSubscription ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                ) : isSubscribed?.subscribed ? (
-                  <>
-                    <BellOff className="h-4 w-4 mr-2" />
-                    Suscrito
-                  </>
-                ) : (
-                  <>
-                    <Bell className="h-4 w-4 mr-2" />
-                    Suscribirse
-                  </>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={() => toggleSubscription.mutate({ channelId: channel.id })}
+                  disabled={isLoadingSubscription || toggleSubscription.isPending}
+                  variant={isSubscribed?.subscribed ? "outline" : "default"}
+                >
+                  {isLoadingSubscription ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : isSubscribed?.subscribed ? (
+                    <>
+                      <BellOff className="h-4 w-4 mr-2" />
+                      Suscrito
+                    </>
+                  ) : (
+                    <>
+                      <Bell className="h-4 w-4 mr-2" />
+                      Suscribirse
+                    </>
+                  )}
+                </Button>
+                {channel.user.canMonetize && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setMonetizationOpen(true)}
+                    className="gap-2"
+                  >
+                    <Sparkles className="size-4 text-yellow-400 fill-yellow-400" />
+                    Apoyar
+                  </Button>
                 )}
-              </Button>
+              </div>
             )}
           </div>
         </div>
@@ -225,6 +239,16 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
         {/* Solo para fines de depuración, mantener o remover según necesidad */}
         {process.env.NODE_ENV !== 'production' && <span className="text-xs text-white bg-black/50 p-1 rounded">Debug: Tkn ID: {process.env.NEXT_PUBLIC_MUX_TOKEN_ID ? 'Sí' : 'No'}</span>}
       </div>
+
+      {/* Monetization Modal */}
+      {channel.user.canMonetize && (
+        <MonetizationModal
+          creatorId={channel.user.id}
+          creatorName={channel.user.name}
+          open={monetizationOpen}
+          onOpenChange={setMonetizationOpen}
+        />
+      )}
     </div>
   );
 };

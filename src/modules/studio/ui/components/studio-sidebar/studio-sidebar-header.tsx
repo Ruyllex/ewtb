@@ -3,13 +3,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserAvatar } from "@/components/user-avatar";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export const StudioSidebarHeader = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { state } = useSidebar();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
 
-  if (!user)
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Durante SSR o antes de que Clerk se cargue, mostrar skeleton
+  if (!mounted || !isLoaded || !user) {
     return (
       <SidebarHeader className="flex items-center justify-center pb-4">
         <Skeleton className="size-[112px] rounded-full" />
@@ -19,6 +26,7 @@ export const StudioSidebarHeader = () => {
         </div>
       </SidebarHeader>
     );
+  }
 
   if (state === "collapsed") {
     return (

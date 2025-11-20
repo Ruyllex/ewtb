@@ -4,7 +4,7 @@ import { api } from "@/trpc/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { formatDistanceToNow } from "date-fns";
+import { TimeAgo } from "@/components/time-ago";
 import { THUMBNAIL_FALLBACK } from "../../constants";
 import { formatDuration } from "@/lib/utils";
 import { CheckCircle2 } from "lucide-react";
@@ -177,7 +177,7 @@ export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
                       <span>{video.userName}</span>
                     )}
                     <span>•</span>
-                    <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</span>
+                    <TimeAgo date={video.createdAt} />
                   </div>
                   {video.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2">{video.description}</p>

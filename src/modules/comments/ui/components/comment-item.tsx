@@ -5,8 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { TimeAgo } from "@/components/time-ago";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -158,10 +157,7 @@ export const CommentItem = ({ comment, videoId, level = 0 }: CommentItemProps) =
               <span className="font-semibold text-sm">{comment.user.name}</span>
             )}
             <span className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.fecha), {
-                addSuffix: true,
-                locale: es,
-              })}
+              <TimeAgo date={comment.fecha} locale="es" />
             </span>
           </div>
           <p className="text-sm whitespace-pre-wrap break-words">{comment.texto}</p>

@@ -1,9 +1,11 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { AuthButton } from "@/modules/auth/ui/components/auth-button";
+import { StarsBalance } from "@/components/stars-balance";
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { SearchInput } from "./search-input";
+import { SignedIn } from "@clerk/nextjs";
 
 export const HomeNavbar = () => {
   return (
@@ -14,8 +16,8 @@ export const HomeNavbar = () => {
           <SidebarTrigger />
 
           <Link href={"/"}>
-            <div className="flex items-center gap-1 p-4">
-              <Image src={"/logo.svg"} alt={"Logo"} width={32} height={16} priority />
+            <div className="flex items-center gap-2 p-4">
+              <Image src={"/logo.svg"} alt={"Logo"} width={40} height={40} priority />
               <p className="text-xl font-semibold tracking-tight text-white">FacuGo! Plus</p>
             </div>
           </Link>
@@ -29,6 +31,9 @@ export const HomeNavbar = () => {
         </div>
 
         <div className="shrink-0 items-center flex gap-4 ">
+          <SignedIn>
+            <StarsBalance />
+          </SignedIn>
           <div className="w-26 flex items-center justify-center">
             <AuthButton />
           </div>

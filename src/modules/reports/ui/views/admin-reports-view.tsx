@@ -14,8 +14,7 @@ import { toast } from "sonner";
 import Image from "next/image";
 import Link from "next/link";
 import { InfiniteScroll } from "@/components/infinite-scroll";
-import { formatDistanceToNow } from "date-fns";
-import { es } from "date-fns/locale";
+import { TimeAgo } from "@/components/time-ago";
 import { ReportModerationDialog } from "../components/report-moderation-dialog";
 
 export const AdminReportsView = () => {
@@ -278,111 +277,105 @@ export const AdminReportsView = () => {
                           <ReportModerationDialog report={report as any} />
                         </div>
                         <div className="flex flex-col md:flex-row gap-4">
-                        {/* Información del video */}
-                        {report.video && (
-                          <div className="flex-1">
-                            <div className="flex items-start gap-4">
-                              {report.video.thumbnailUrl && (
-                                <div className="relative w-24 h-16 rounded overflow-hidden bg-muted shrink-0">
+                          {/* Información del video */}
+                          {report.video && (
+                            <div className="flex-1">
+                              <div className="flex items-start gap-4">
+                                {report.video.thumbnailUrl && (
+                                  <div className="relative w-24 h-16 rounded overflow-hidden bg-muted shrink-0">
+                                    <Image
+                                      src={report.video.thumbnailUrl}
+                                      alt={report.video.title || "Video"}
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Video className="h-4 w-4 text-[#5ADBFD] shrink-0" />
+                                    <Link
+                                      href={`/video/${report.video.id}`}
+                                      className="font-semibold hover:underline line-clamp-1 text-white hover:text-[#5ADBFD]"
+                                    >
+                                      {report.video.title || "Sin título"}
+                                    </Link>
+                                  </div>
+                                  <p className="text-sm text-white/70 mb-1">
+                                    Video ID: {report.videoId}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Información del usuario que reporta */}
+                          {report.user && (
+                            <div className="flex-1">
+                              <div className="flex items-start gap-4">
+                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted shrink-0">
                                   <Image
-                                    src={report.video.thumbnailUrl}
-                                    alt={report.video.title || "Video"}
+                                    src={report.user.imageUrl || "/user-placeholder.svg"}
+                                    alt={report.user.name || "Usuario"}
                                     fill
                                     className="object-cover"
                                   />
                                 </div>
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <Video className="h-4 w-4 text-[#5ADBFD] shrink-0" />
-                                  <Link
-                                    href={`/video/${report.video.id}`}
-                                    className="font-semibold hover:underline line-clamp-1 text-white hover:text-[#5ADBFD]"
-                                  >
-                                    {report.video.title || "Sin título"}
-                                  </Link>
-                                </div>
-                                <p className="text-sm text-white/70 mb-1">
-                                  Video ID: {report.videoId}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Información del usuario que reporta */}
-                        {report.user && (
-                          <div className="flex-1">
-                            <div className="flex items-start gap-4">
-                              <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted shrink-0">
-                                <Image
-                                  src={report.user.imageUrl || "/user-placeholder.svg"}
-                                  alt={report.user.name || "Usuario"}
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-2">
-                                  <User className="h-4 w-4 text-[#5ADBFD] shrink-0" />
-                                  <span className="font-semibold text-white">
-                                    {report.user.name || "Usuario desconocido"}
-                                  </span>
-                                </div>
-                                {report.user.username && (
-                                  <p className="text-sm text-white/70 mb-1">
-                                    @{report.user.username}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <User className="h-4 w-4 text-[#5ADBFD] shrink-0" />
+                                    <span className="font-semibold text-white">
+                                      {report.user.name || "Usuario desconocido"}
+                                    </span>
+                                  </div>
+                                  {report.user.username && (
+                                    <p className="text-sm text-white/70 mb-1">
+                                      @{report.user.username}
+                                    </p>
+                                  )}
+                                  <p className="text-sm text-white/70">
+                                    Usuario ID: {report.userId}
                                   </p>
-                                )}
-                                <p className="text-sm text-white/70">
-                                  Usuario ID: {report.userId}
-                                </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Razón del reporte */}
-                        <div className="flex-1">
-                          <div className="flex items-start gap-2 mb-2">
-                            <AlertTriangle className="h-4 w-4 text-[#5ADBFD] shrink-0 mt-1" />
-                            <div className="flex-1">
-                              <Label className="text-sm font-semibold mb-1 block text-white">Razón del Reporte</Label>
-                              <p className="text-sm whitespace-pre-wrap break-words text-white/90">{report.reason}</p>
+                          {/* Razón del reporte */}
+                          <div className="flex-1">
+                            <div className="flex items-start gap-2 mb-2">
+                              <AlertTriangle className="h-4 w-4 text-[#5ADBFD] shrink-0 mt-1" />
+                              <div className="flex-1">
+                                <Label className="text-sm font-semibold mb-1 block text-white">Razón del Reporte</Label>
+                                <p className="text-sm whitespace-pre-wrap break-words text-white/90">{report.reason}</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-white/70">
-                              <Calendar className="h-3 w-3" />
-                              <span>
-                                Creado {formatDistanceToNow(new Date(report.createdAt), {
-                                  addSuffix: true,
-                                  locale: es,
-                                })}
-                              </span>
-                            </div>
-                            {report.reviewedAt && (
+                            <div className="space-y-2">
                               <div className="flex items-center gap-2 text-xs text-white/70">
-                                <ShieldCheckIcon className="h-3 w-3" />
+                                <Calendar className="h-3 w-3" />
                                 <span>
-                                  Revisado {formatDistanceToNow(new Date(report.reviewedAt), {
-                                    addSuffix: true,
-                                    locale: es,
-                                  })}
-                                  {report.reviewer && ` por ${report.reviewer.name}`}
+                                  Creado <TimeAgo date={report.createdAt} locale="es" />
                                 </span>
                               </div>
-                            )}
-                            {report.adminNotes && (
-                              <div className="mt-2 p-2 bg-white/5 backdrop-blur-sm border border-white/20 rounded text-xs text-white/90">
-                                <strong>Notas del admin:</strong> {report.adminNotes}
-                              </div>
-                            )}
+                              {report.reviewedAt && (
+                                <div className="flex items-center gap-2 text-xs text-white/70">
+                                  <ShieldCheckIcon className="h-3 w-3" />
+                                  <span>
+                                    Revisado <TimeAgo date={report.reviewedAt} locale="es" />
+                                    {report.reviewer && ` por ${report.reviewer.name}`}
+                                  </span>
+                                </div>
+                              )}
+                              {report.adminNotes && (
+                                <div className="mt-2 p-2 bg-white/5 backdrop-blur-sm border border-white/20 rounded text-xs text-white/90">
+                                  <strong>Notas del admin:</strong> {report.adminNotes}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>

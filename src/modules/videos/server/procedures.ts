@@ -315,15 +315,22 @@ export const videosRouter = createTRPCRouter({
     .query(async ({ input }) => {
       const { categoryId, limit, cursor } = input;
 
-      const whereConditions = [
+      const whereConditions: any[] = [
         eq(videos.visibility, "public"),
-        categoryId ? eq(videos.categoryId, categoryId) : undefined,
-        cursor
-          ? sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
-          : undefined,
-      ].filter(Boolean);
+      ];
+
+      if (categoryId) {
+        whereConditions.push(eq(videos.categoryId, categoryId));
+      }
+
+      if (cursor) {
+        whereConditions.push(
+          sql`(${videos.createdAt} < ${cursor.createdAt} OR (${videos.createdAt} = ${cursor.createdAt} AND ${videos.id} < ${cursor.id}))`
+        );
+      }
 
       // Ahora hacemos join con users y channels para devolver info de canal junto al video
+      // Usamos leftJoin para channels porque no todos los usuarios pueden tener un canal creado
       const results = await db
         .select({
           id: videos.id,
@@ -341,13 +348,13 @@ export const videosRouter = createTRPCRouter({
           userUsername: users.username,
           userImageUrl: users.imageUrl,
 
-          // Channel (desde tabla channels)
+          // Channel (desde tabla channels) - puede ser null si el usuario no tiene canal
           channelName: channels.name,
           channelAvatar: channels.avatar,
         })
         .from(videos)
         .innerJoin(users, eq(videos.userId, users.id))
-        .innerJoin(channels, eq(channels.userId, users.id))
+        .leftJoin(channels, eq(channels.userId, users.id))
         .where(and(...whereConditions))
         .orderBy(desc(videos.createdAt), desc(videos.id))
         .limit(limit + 1);
@@ -602,6 +609,14 @@ export const videosRouter = createTRPCRouter({
         .where(inArray(channels.id, subscribedChannelIds));
 
       const subscribedUserIds = subscribedChannels.map((ch) => ch.userId);
+
+      // Si no hay user IDs, retornar lista vacía
+      if (subscribedUserIds.length === 0) {
+        return {
+          items: [],
+          nextCursor: null,
+        };
+      }
 
       const whereConditions = [
         eq(videos.visibility, "public"),

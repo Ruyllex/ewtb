@@ -19,8 +19,9 @@ import {
   AlertCircleIcon,
   Loader2Icon,
   ExternalLinkIcon,
+  Sparkles,
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { TimeAgo } from "@/components/time-ago";
 import { toast } from "sonner";
 import { ResponsiveModal } from "@/components/responsive-dialog";
 import Image from "next/image";
@@ -54,7 +55,7 @@ export const EarningsView = () => {
       },
     });
 
-  const createPayout = trpc.monetization.createPayout.useMutation({
+  const createPayout = trpc.monetization.createPayoutRequest.useMutation({
       onSuccess: () => {
         toast.success("Retiro solicitado exitosamente");
         setShowPayoutModal(false);
@@ -66,22 +67,22 @@ export const EarningsView = () => {
       },
     });
 
-  const handleConnectStripe = async () => {
+  const handleConnectPayPal = async () => {
     try {
-      const response = await fetch("/api/stripe/connect", {
+      const response = await fetch("/api/paypal/connect", {
         method: "POST",
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Error al conectar Stripe");
+        throw new Error(error.error || "Error al conectar PayPal");
       }
 
       const data = await response.json();
       window.location.href = data.url;
     } catch (error) {
-      console.error("Error conectando Stripe:", error);
-      toast.error(error instanceof Error ? error.message : "Error al conectar Stripe");
+      console.error("Error conectando PayPal:", error);
+      toast.error(error instanceof Error ? error.message : "Error al conectar PayPal");
     }
   };
 
@@ -103,6 +104,7 @@ export const EarningsView = () => {
   const stats = earnings?.stats || {
     totalEarned: 0,
     totalTips: 0,
+    totalStarsTips: 0,
     totalSubscriptions: 0,
     pendingAmount: 0,
   };
@@ -116,15 +118,19 @@ export const EarningsView = () => {
             <h1 className="text-3xl font-bold">Ganancias</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus ganancias y retiros</p>
           </div>
-          {parseFloat(balance.availableBalance) > 0 && (
-            <Button 
-              onClick={() => setShowPayoutModal(true)} 
-              disabled={parseFloat(balance.availableBalance) < 1 || !connectStatus?.connected || connectStatus.accountStatus?.status !== "active"}
-            >
-              <WalletIcon className="size-4 mr-2" />
-              Retirar
-            </Button>
-          )}
+          <Button 
+            onClick={() => setShowPayoutModal(true)} 
+            disabled={parseFloat(balance.availableBalance) < 20 || !connectStatus?.canMonetize || !connectStatus?.connected || connectStatus.accountStatus?.status !== "active"}
+            variant={parseFloat(balance.availableBalance) >= 20 && connectStatus?.canMonetize && connectStatus?.connected && connectStatus.accountStatus?.status === "active" ? "default" : "outline"}
+          >
+            <WalletIcon className="size-4 mr-2" />
+            Solicitar Retiro
+            {parseFloat(balance.availableBalance) < 20 && parseFloat(balance.availableBalance) > 0 && (
+              <span className="ml-2 text-xs opacity-70">
+                (${(20 - parseFloat(balance.availableBalance)).toFixed(2)} faltantes)
+              </span>
+            )}
+          </Button>
         </div>
 
         {/* Monetization Status */}
@@ -133,10 +139,10 @@ export const EarningsView = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <AlertCircleIcon className="size-5 text-yellow-600" />
-                Conecta tu cuenta de Stripe
+                Conecta tu cuenta de PayPal
               </CardTitle>
               <CardDescription>
-                Puedes recibir donaciones y suscripciones, pero necesitas vincular tu cuenta de Stripe Connect para retirar tus ganancias. Es rápido y seguro.
+                Puedes recibir donaciones y suscripciones, pero necesitas vincular tu cuenta de PayPal para retirar tus ganancias. Es rápido y seguro.
                 {parseFloat(balance.availableBalance) > 0 && (
                   <span className="block mt-2 font-semibold text-yellow-800 dark:text-yellow-200">
                     Tienes ${parseFloat(balance.availableBalance).toFixed(2)} esperando para retirar.
@@ -145,9 +151,9 @@ export const EarningsView = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleConnectStripe}>
+              <Button onClick={handleConnectPayPal}>
                 <CreditCardIcon className="size-4 mr-2" />
-                Conectar Stripe
+                Conectar PayPal
               </Button>
             </CardContent>
           </Card>
@@ -159,11 +165,11 @@ export const EarningsView = () => {
                 Cuenta pendiente de verificación
               </CardTitle>
               <CardDescription>
-                Tu cuenta de Stripe está siendo verificada. Completa el proceso de onboarding para activar los pagos.
+                Tu cuenta de PayPal está siendo verificada. Completa el proceso de onboarding para activar los pagos.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleConnectStripe} variant="outline">
+              <Button onClick={handleConnectPayPal} variant="outline">
                 <ExternalLinkIcon className="size-4 mr-2" />
                 Completar verificación
               </Button>
@@ -220,6 +226,14 @@ export const EarningsView = () => {
               </CardTitle>
               <CardDescription>Tu cuenta está lista para recibir pagos de tips y suscripciones.</CardDescription>
             </CardHeader>
+            {parseFloat(balance.availableBalance) < 20 && parseFloat(balance.availableBalance) > 0 && (
+              <CardContent>
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <AlertCircleIcon className="size-4 inline mr-1" />
+                  Tienes ${parseFloat(balance.availableBalance).toFixed(2)} disponibles. Necesitas alcanzar $20.00 USD para solicitar un retiro.
+                </p>
+              </CardContent>
+            )}
           </Card>
         )}
 
@@ -232,7 +246,11 @@ export const EarningsView = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">${parseFloat(balance.availableBalance).toFixed(2)}</div>
-              <p className="text-xs text-muted-foreground">Listo para retirar</p>
+              <p className="text-xs text-muted-foreground">
+                {parseFloat(balance.availableBalance) >= 20 
+                  ? "Listo para retirar" 
+                  : `Necesitas $${(20 - parseFloat(balance.availableBalance)).toFixed(2)} más para solicitar retiro`}
+              </p>
             </CardContent>
           </Card>
 
@@ -255,6 +273,12 @@ export const EarningsView = () => {
             <CardContent>
               <div className="text-2xl font-bold">${stats.totalTips.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">Total en tips</p>
+              {stats.totalStarsTips > 0 && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  {stats.totalStarsTips.toLocaleString()} Stars recibidas
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -301,17 +325,36 @@ export const EarningsView = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{transaction.description || "Transacción"}</p>
-                          <Badge variant={transaction.type === "tip" ? "default" : "secondary"}>
-                            {transaction.type === "tip" ? "Tip" : "Suscripción"}
+                          <Badge variant={transaction.type === "stars_tip" || transaction.type === "tip" ? "default" : "secondary"}>
+                            {transaction.type === "stars_tip" ? (
+                              <span className="flex items-center gap-1">
+                                <Sparkles className="h-3 w-3" />
+                                Stars Tip
+                              </span>
+                            ) : transaction.type === "tip" ? "Tip" : "Suscripción"}
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {formatDistanceToNow(new Date(transaction.createdAt), { addSuffix: true })}
+                          <TimeAgo date={transaction.createdAt} />
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold text-green-600">+${parseFloat(transaction.amount).toFixed(2)}</p>
+                      {transaction.type === "stars_tip" && transaction.starsAmount && parseFloat(transaction.starsAmount) > 0 ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="font-semibold text-yellow-600 flex items-center gap-1">
+                            <Sparkles className="h-4 w-4 fill-yellow-600" />
+                            {parseFloat(transaction.starsAmount).toLocaleString()} Stars
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            (${parseFloat(transaction.amount || "0").toFixed(2)} USD)
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="font-semibold text-green-600">
+                          +${parseFloat(transaction.amount || "0").toFixed(2)}
+                        </p>
+                      )}
                       <Badge
                         variant={
                           transaction.status === "completed"
@@ -347,43 +390,46 @@ export const EarningsView = () => {
 
       {/* Payout Modal */}
       <ResponsiveModal
-        title="Retirar Fondos"
+        title="Solicitar Retiro de Fondos"
         open={showPayoutModal}
         onOpenChange={setShowPayoutModal}
       >
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="payout-amount">Monto a retirar (USD)</Label>
-            <Input
+              <Input
               id="payout-amount"
               type="number"
-              min="1"
+              min="20"
               step="0.01"
               max={parseFloat(balance.availableBalance)}
               value={payoutAmount}
               onChange={(e) => setPayoutAmount(e.target.value)}
-              placeholder={`Máximo: $${parseFloat(balance.availableBalance).toFixed(2)}`}
+              placeholder={`Mínimo: $20.00 - Máximo: $${parseFloat(balance.availableBalance).toFixed(2)}`}
             />
             <p className="text-sm text-muted-foreground">
               Saldo disponible: ${parseFloat(balance.availableBalance).toFixed(2)}
+            </p>
+            <p className="text-xs text-yellow-600 dark:text-yellow-400">
+              Monto mínimo de retiro: $20.00 USD
             </p>
           </div>
 
           <div className="bg-muted p-4 rounded-lg">
             <p className="text-sm text-muted-foreground">
-              Los retiros se procesan automáticamente a tu cuenta bancaria vinculada en Stripe. Puede tomar 2-5 días
-              hábiles.
+              Tu solicitud de retiro será enviada a los administradores para su revisión. Una vez aprobada, el pago se procesará automáticamente a tu cuenta de PayPal. Puede tomar 2-5 días
+              hábiles. La plataforma retiene una comisión del 3% sobre el monto solicitado.
             </p>
           </div>
 
           {!connectStatus?.connected || connectStatus.accountStatus?.status !== "active" ? (
             <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4">
               <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-3">
-                Necesitas conectar y verificar tu cuenta de Stripe Connect para retirar fondos.
+                Necesitas conectar y verificar tu cuenta de PayPal para retirar fondos.
               </p>
-              <Button onClick={handleConnectStripe} className="w-full">
+              <Button onClick={handleConnectPayPal} className="w-full">
                 <CreditCardIcon className="size-4 mr-2" />
-                Conectar Stripe
+                Conectar PayPal
               </Button>
             </div>
           ) : (
@@ -393,8 +439,8 @@ export const EarningsView = () => {
               </Button>
               <Button
                 onClick={() => {
-                  if (!payoutAmount || parseFloat(payoutAmount) < 1) {
-                    toast.error("Ingresa un monto válido");
+                  if (!payoutAmount || parseFloat(payoutAmount) < 20) {
+                    toast.error("El monto mínimo de retiro es $20.00 USD");
                     return;
                   }
                   if (parseFloat(payoutAmount) > parseFloat(balance.availableBalance)) {
@@ -403,7 +449,7 @@ export const EarningsView = () => {
                   }
                   createPayout.mutate({ amount: parseFloat(payoutAmount) });
                 }}
-                disabled={createPayout.isPending}
+                disabled={createPayout.isPending || parseFloat(payoutAmount || "0") < 20}
               >
                 {createPayout.isPending ? (
                   <>
@@ -411,7 +457,7 @@ export const EarningsView = () => {
                     Procesando...
                   </>
                 ) : (
-                  "Confirmar Retiro"
+                  "Solicitar Retiro"
                 )}
               </Button>
             </div>
