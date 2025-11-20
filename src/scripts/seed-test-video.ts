@@ -22,17 +22,16 @@ if (!process.env.DATABASE_URL) {
 const sql = neon(process.env.DATABASE_URL);
 const db = drizzle(sql);
 
-// Playback ID de prueba de Mux
-// IMPORTANTE: Reemplaza esto con un playback ID real de tu cuenta de Mux
+// URL de S3 de prueba (debe ser una URL pública de S3)
+// IMPORTANTE: Reemplaza esto con una URL real de S3 de tu bucket
 // Puedes obtener uno:
 // 1. Subiendo un video desde la app (ir a /studio y crear un video)
-// 2. O usando un playback ID de prueba de Mux desde su dashboard
-// 3. O configurando MUX_TEST_PLAYBACK_ID en .env.local
+// 2. O usando una URL directa de S3 de un video existente
+// 3. O configurando AWS_S3_TEST_VIDEO_URL en .env.local
 //
-// Para pruebas, puedes usar este playback ID de ejemplo de Mux (puede no funcionar):
-// Si tienes un video en Mux, copia su playback ID y úsalo aquí
-const TEST_PLAYBACK_ID =
-  process.env.MUX_TEST_PLAYBACK_ID || "jNUnX01F27rN0148z00gYPCjV011Q7I3CkSXQECbpAwxr8c";
+// Ejemplo de formato: https://tu-bucket.s3.us-east-1.amazonaws.com/videos/test-video.mp4
+const TEST_S3_URL =
+  process.env.AWS_S3_TEST_VIDEO_URL || "https://example.com/test-video.mp4";
 
 async function main() {
   console.log("🎬 Agregando video de prueba...");
@@ -75,16 +74,15 @@ async function main() {
         .update(videos)
         .set({
           visibility: "public",
-          muxStatus: "ready",
-          muxPlaybackId: TEST_PLAYBACK_ID,
-          thumbnailUrl: `https://image.mux.com/${TEST_PLAYBACK_ID}/thumbnail.png`,
-          previewUrl: `https://image.mux.com/${TEST_PLAYBACK_ID}/animated.gif`,
+          s3Url: TEST_S3_URL,
+          s3Key: "videos/test-video.mp4", // Ejemplo de key
+          thumbnailUrl: null, // El usuario debe subir un thumbnail manualmente
           duration: 60000, // 1 minuto
           updatedAt: new Date(),
         })
         .where(eq(videos.id, existingVideo.id));
       console.log("✅ Video de prueba actualizado:", existingVideo.id);
-      console.log(`🔗 URL del video: http://localhost:3000/video/${existingVideo.id}`);
+      console.log(`🔗 URL del video: http://localhost:3000/videos/${existingVideo.id}`);
       return;
     }
 
@@ -103,10 +101,9 @@ async function main() {
         userId: testUser.id,
         categoryId: category?.id || null,
         visibility: "public",
-        muxStatus: "ready",
-        muxPlaybackId: TEST_PLAYBACK_ID,
-        thumbnailUrl: `https://image.mux.com/${TEST_PLAYBACK_ID}/thumbnail.png`,
-        previewUrl: `https://image.mux.com/${TEST_PLAYBACK_ID}/animated.gif`,
+        s3Url: TEST_S3_URL,
+        s3Key: "videos/test-video.mp4", // Ejemplo de key
+        thumbnailUrl: null, // El usuario debe subir un thumbnail manualmente
         duration: 60000, // 1 minuto en milisegundos
       })
       .returning();
@@ -114,10 +111,10 @@ async function main() {
     console.log("✅ Video de prueba creado exitosamente!");
     console.log(`📹 Título: ${newVideo.title}`);
     console.log(`🆔 ID: ${newVideo.id}`);
-    console.log(`🔗 URL: http://localhost:3000/video/${newVideo.id}`);
+    console.log(`🔗 URL: http://localhost:3000/videos/${newVideo.id}`);
     console.log(`\n💡 Puedes buscar este video usando: "prueba" o "bienvenido"`);
-    console.log(`\n⚠️  NOTA: Si el video no se reproduce, asegúrate de tener un playback ID válido de Mux.`);
-    console.log(`   Puedes actualizar el playback ID editando este script o configurando MUX_TEST_PLAYBACK_ID en .env.local`);
+    console.log(`\n⚠️  NOTA: Si el video no se reproduce, asegúrate de tener una URL válida de S3.`);
+    console.log(`   Puedes actualizar la URL editando este script o configurando AWS_S3_TEST_VIDEO_URL en .env.local`);
   } catch (error) {
     console.error("❌ Error al crear video de prueba:", error);
     process.exit(1);
@@ -125,4 +122,3 @@ async function main() {
 }
 
 main();
-

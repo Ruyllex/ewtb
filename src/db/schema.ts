@@ -108,12 +108,8 @@ export const videos = pgTable("videos", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
   description: text("description"),
-  muxStatus: text("mux_status"),
-  muxAssetId: text("mux_asset_id").unique(),
-  muxUploadId: text("mux_upload_id").unique(),
-  muxPlaybackId: text("mux_playback_id").unique(),
-  muxTrackId: text("mux_track_id").unique(),
-  muxTrackStatus: text("mux_track_status"),
+  s3Key: text("s3_key").unique(), // Key del archivo en S3
+  s3Url: text("s3_url"), // URL pública del video en S3
   thumbnailUrl: text("thumbnail_url"),
   thumbnailKey: text("thumbnail_key"),
   thumbnailImage: bytea("thumbnail_image"), // Imagen del thumbnail almacenada en la BD
@@ -222,10 +218,11 @@ export const liveStreams = pgTable("live_streams", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
   description: text("description"),
-  streamKey: text("stream_key").unique().notNull(),
-  playbackId: text("playback_id").unique(),
+  ivsChannelArn: text("ivs_channel_arn").unique(), // ARN del canal IVS
+  ivsStreamKey: text("ivs_stream_key").unique().notNull(), // Stream key de IVS
+  ivsPlaybackUrl: text("ivs_playback_url"), // URL de reproducción del stream
+  ivsIngestEndpoint: text("ivs_ingest_endpoint"), // Endpoint RTMP para ingest
   status: text("status").default("idle").notNull(), // idle, active, disconnected
-  muxLiveStreamId: text("mux_live_stream_id").unique(),
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })
     .notNull(),

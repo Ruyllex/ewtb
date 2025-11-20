@@ -8,7 +8,7 @@ import { useSuspenseQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { CopyIcon, CopyCheckIcon, Loader2Icon, TrashIcon, VideoIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
-import MuxPlayer from "@mux/mux-player-react";
+import VideoPlayer from "@/modules/videos/ui/components/video-player";
 import { useRouter } from "next/navigation";
 
 interface LiveStreamViewProps {
@@ -70,8 +70,8 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
   );
 
   const handleCopyStreamKey = async () => {
-    if (stream.streamKey) {
-      await navigator.clipboard.writeText(stream.streamKey);
+    if (stream.ivsStreamKey) {
+      await navigator.clipboard.writeText(stream.ivsStreamKey);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
       toast.success("Stream key copiado al portapapeles");
@@ -79,9 +79,9 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
   };
 
   const handleCopyPlaybackId = async () => {
-    if (stream.playbackId) {
-      await navigator.clipboard.writeText(stream.playbackId);
-      toast.success("Playback ID copiado al portapapeles");
+    if (stream.ivsPlaybackUrl) {
+      await navigator.clipboard.writeText(stream.ivsPlaybackUrl);
+      toast.success("Playback URL copiado al portapapeles");
     }
   };
 
@@ -112,14 +112,11 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
         {/* Reproductor de video */}
         <div className="lg:col-span-2 space-y-4">
           <div className="aspect-video bg-black rounded-lg overflow-hidden">
-            {stream.playbackId ? (
-              <MuxPlayer
-                playbackId={stream.playbackId}
+            {stream.ivsPlaybackUrl ? (
+              <VideoPlayer
+                playbackId={stream.ivsPlaybackUrl}
                 streamType="live"
                 autoPlay={false}
-                muted={false}
-                className="w-full h-full"
-                accentColor="#FF2056"
               />
             ) : (
               <div className="flex items-center justify-center h-full text-white">
@@ -153,16 +150,18 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
             <h2 className="font-semibold">Configuración de OBS</h2>
 
             <div className="space-y-2">
-              <Label>Servidor RTMP</Label>
+              <Label>Servidor RTMP (Ingest Endpoint)</Label>
               <div className="flex gap-2">
-                <Input value="rtmp://live.mux.com/app" readOnly className="font-mono text-sm" />
+                <Input value={stream.ivsIngestEndpoint || ""} readOnly className="font-mono text-sm" />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    navigator.clipboard.writeText("rtmp://live.mux.com/app");
-                    toast.success("Servidor copiado");
+                    if (stream.ivsIngestEndpoint) {
+                      navigator.clipboard.writeText(stream.ivsIngestEndpoint);
+                      toast.success("Servidor copiado");
+                    }
                   }}
                 >
                   <CopyIcon className="size-4" />
@@ -174,7 +173,7 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
               <Label>Stream Key</Label>
               <div className="flex gap-2">
                 <Input
-                  value={stream.streamKey}
+                  value={stream.ivsStreamKey || ""}
                   readOnly
                   className="font-mono text-sm"
                   type={showStreamKey ? "text" : "password"}
@@ -200,11 +199,11 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
               </div>
             </div>
 
-            {stream.playbackId && (
+            {stream.ivsPlaybackUrl && (
               <div className="space-y-2">
-                <Label>Playback ID</Label>
+                <Label>Playback URL</Label>
                 <div className="flex gap-2">
-                  <Input value={stream.playbackId} readOnly className="font-mono text-sm" />
+                  <Input value={stream.ivsPlaybackUrl} readOnly className="font-mono text-sm" />
                   <Button
                     type="button"
                     variant="outline"
@@ -223,8 +222,8 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
                 <li>Abre OBS Studio</li>
                 <li>Ve a Settings → Stream</li>
                 <li>Service: Custom</li>
-                <li>Server: rtmp://live.mux.com/app</li>
-                <li>Stream Key: Copia el key de arriba</li>
+                <li>Server: Copia el Ingest Endpoint de arriba</li>
+                <li>Stream Key: Copia el Stream Key de arriba</li>
                 <li>Haz clic en Start Streaming</li>
               </ol>
             </div>

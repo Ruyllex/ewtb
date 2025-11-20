@@ -150,3 +150,4 @@ console.log('\n⚠️  IMPORTANTE: Si aún tienes errores, asegúrate de haber r
 console.log('   Detén el servidor (Ctrl+C) y reinícialo con: npm run dev');
 
 
+

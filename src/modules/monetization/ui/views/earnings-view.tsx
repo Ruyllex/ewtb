@@ -20,11 +20,17 @@ import {
   Loader2Icon,
   ExternalLinkIcon,
   Sparkles,
+  CalendarIcon,
+  BarChart3Icon,
+  ClockIcon,
 } from "lucide-react";
 import { TimeAgo } from "@/components/time-ago";
 import { toast } from "sonner";
 import { ResponsiveModal } from "@/components/responsive-dialog";
 import Image from "next/image";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale/es";
 
 export const EarningsView = () => {
   const [payoutAmount, setPayoutAmount] = useState("");
@@ -39,6 +45,11 @@ export const EarningsView = () => {
 
   const { data: earnings, isLoading: isLoadingEarnings, refetch: refetchEarnings } = trpc.monetization.getEarnings.useQuery({
     limit: 50,
+    offset: 0,
+  });
+
+  const { data: payouts, isLoading: isLoadingPayouts } = trpc.monetization.getPayouts.useQuery({
+    limit: 20,
     offset: 0,
   });
 
@@ -238,7 +249,7 @@ export const EarningsView = () => {
         )}
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Saldo Disponible</CardTitle>
@@ -250,6 +261,21 @@ export const EarningsView = () => {
                 {parseFloat(balance.availableBalance) >= 20 
                   ? "Listo para retirar" 
                   : `Necesitas $${(20 - parseFloat(balance.availableBalance)).toFixed(2)} más para solicitar retiro`}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Saldo Pendiente</CardTitle>
+              <ClockIcon className="size-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${parseFloat(balance.pendingBalance || "0").toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">
+                {parseFloat(balance.pendingBalance || "0") > 0 
+                  ? "En proceso de retiro" 
+                  : "No hay retiros pendientes"}
               </p>
             </CardContent>
           </Card>
@@ -293,6 +319,274 @@ export const EarningsView = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Próxima Fecha de Retiro */}
+        {earnings?.nextPayout && (
+          <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-900">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarIcon className="size-5 text-blue-600" />
+                Próximo Retiro
+              </CardTitle>
+              <CardDescription>
+                {earnings.nextPayout.status === "pending" 
+                  ? "Tu solicitud de retiro está pendiente de aprobación" 
+                  : "Tu retiro está siendo procesado por PayPal"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Monto solicitado:</span>
+                  <span className="font-semibold">${parseFloat(earnings.nextPayout.amount).toFixed(2)} USD</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Comisión (3%):</span>
+                  <span className="text-sm">-${parseFloat(earnings.nextPayout.platformFee || "0").toFixed(2)} USD</span>
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Neto a recibir:</span>
+                  <span className="font-bold text-green-600">${parseFloat(earnings.nextPayout.netAmount).toFixed(2)} USD</span>
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-sm text-muted-foreground">Solicitado:</span>
+                  <span className="text-sm">
+                    <TimeAgo date={earnings.nextPayout.createdAt} />
+                  </span>
+                </div>
+                <Badge 
+                  variant={earnings.nextPayout.status === "processing" ? "default" : "secondary"}
+                  className="mt-2"
+                >
+                  {earnings.nextPayout.status === "processing" ? (
+                    <>
+                      <Loader2Icon className="size-3 mr-1 animate-spin" />
+                      Procesando
+                    </>
+                  ) : (
+                    <>
+                      <ClockIcon className="size-3 mr-1" />
+                      Pendiente
+                    </>
+                  )}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Desglose de Ingresos por Origen */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Desglose de Ingresos por Origen</CardTitle>
+            <CardDescription>Distribución de tus ganancias por tipo de transacción</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-yellow-500" />
+                    Tips con Stars
+                  </span>
+                  <span className="font-semibold">${stats.totalTips.toFixed(2)}</span>
+                </div>
+                {stats.totalStarsTips > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {stats.totalStarsTips.toLocaleString()} Stars recibidas
+                  </p>
+                )}
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-yellow-500" 
+                    style={{ 
+                      width: `${stats.totalEarned > 0 ? (stats.totalTips / stats.totalEarned) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <CreditCardIcon className="h-4 w-4 text-blue-500" />
+                    Suscripciones
+                  </span>
+                  <span className="font-semibold">${stats.totalSubscriptions.toFixed(2)}</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500" 
+                    style={{ 
+                      width: `${stats.totalEarned > 0 ? (stats.totalSubscriptions / stats.totalEarned) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Total Generado</span>
+                  <span className="font-bold text-lg">${stats.totalEarned.toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ganancias totales históricas
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Gráfica de 30 días */}
+        {earnings?.dailyEarnings && earnings.dailyEarnings.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3Icon className="size-5" />
+                Ganancias de los Últimos 30 Días
+              </CardTitle>
+              <CardDescription>Evolución diaria de tus ganancias</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={earnings.dailyEarnings.map((day) => ({
+                  date: format(parseISO(day.date), "d MMM", { locale: es }),
+                  "Total": day.total,
+                  "Tips": day.tips,
+                  "Suscripciones": day.subscriptions,
+                }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 12 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip 
+                    formatter={(value: number) => `$${value.toFixed(2)}`}
+                    contentStyle={{ 
+                      backgroundColor: "var(--background)",
+                      border: "1px solid var(--border)",
+                      borderRadius: "6px"
+                    }}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Total" 
+                    stroke="hsl(var(--chart-1))" 
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Tips" 
+                    stroke="hsl(var(--chart-2))" 
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="Suscripciones" 
+                    stroke="hsl(var(--chart-3))" 
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Retiros Históricos */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Historial de Retiros</CardTitle>
+            <CardDescription>Lista de tus solicitudes de retiro</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingPayouts ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2Icon className="size-8 animate-spin" />
+              </div>
+            ) : payouts && payouts.length > 0 ? (
+              <div className="space-y-4">
+                {payouts.map((payout) => (
+                  <div key={payout.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">
+                          Retiro de ${parseFloat(payout.amount).toFixed(2)} USD
+                        </p>
+                        <Badge
+                          variant={
+                            payout.status === "completed"
+                              ? "default"
+                              : payout.status === "processing"
+                                ? "secondary"
+                                : payout.status === "failed"
+                                  ? "destructive"
+                                  : "outline"
+                          }
+                        >
+                          {payout.status === "completed" ? (
+                            <>
+                              <CheckCircleIcon className="size-3 mr-1" />
+                              Completado
+                            </>
+                          ) : payout.status === "processing" ? (
+                            <>
+                              <Loader2Icon className="size-3 mr-1 animate-spin" />
+                              Procesando
+                            </>
+                          ) : payout.status === "failed" ? (
+                            <>
+                              <XCircleIcon className="size-3 mr-1" />
+                              Fallido
+                            </>
+                          ) : (
+                            <>
+                              <ClockIcon className="size-3 mr-1" />
+                              Pendiente
+                            </>
+                          )}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-sm text-muted-foreground">
+                          Neto recibido: <span className="font-semibold text-green-600">${parseFloat(payout.netAmount).toFixed(2)} USD</span>
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Comisión (3%): ${parseFloat(payout.platformFee || "0").toFixed(2)} USD
+                        </p>
+                        {payout.processedAt && (
+                          <p className="text-sm text-muted-foreground">
+                            Procesado: <TimeAgo date={payout.processedAt} />
+                          </p>
+                        )}
+                        {payout.failureReason && (
+                          <p className="text-sm text-red-600 mt-2">
+                            <AlertCircleIcon className="size-4 inline mr-1" />
+                            {payout.failureReason}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Solicitado: <TimeAgo date={payout.createdAt} />
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No hay retiros aún</p>
+                <p className="text-sm mt-1">Los retiros aparecerán aquí cuando los solicites</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Transactions */}
         <Card>

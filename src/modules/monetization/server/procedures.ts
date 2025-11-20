@@ -303,6 +303,40 @@ export const monetizationRouter = createTRPCRouter({
         .from(transactions)
         .where(eq(transactions.userId, userId));
 
+      // Obtener el próximo retiro (si hay uno pendiente o en proceso)
+      const [nextPayout] = await db
+        .select()
+        .from(payouts)
+        .where(
+          and(
+            eq(payouts.userId, userId),
+            or(eq(payouts.status, "pending"), eq(payouts.status, "processing"))
+          )
+        )
+        .orderBy(desc(payouts.createdAt))
+        .limit(1);
+
+      // Obtener datos de los últimos 30 días para la gráfica (agrupados por día)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const dailyEarnings = await db
+        .select({
+          date: sql<string>`DATE(${transactions.createdAt})`,
+          total: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.status} = 'completed' THEN ${transactions.amount}::numeric ELSE 0 END), 0)`,
+          tips: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} IN ('tip', 'stars_tip') AND ${transactions.status} = 'completed' THEN ${transactions.amount}::numeric ELSE 0 END), 0)`,
+          subscriptions: sql<number>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'subscription' AND ${transactions.status} = 'completed' THEN ${transactions.amount}::numeric ELSE 0 END), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            gte(transactions.createdAt, thirtyDaysAgo)
+          )
+        )
+        .groupBy(sql`DATE(${transactions.createdAt})`)
+        .orderBy(sql`DATE(${transactions.createdAt})`);
+
       return {
         balance: balance || {
           availableBalance: "0",
@@ -318,6 +352,13 @@ export const monetizationRouter = createTRPCRouter({
           totalSubscriptions: Number(stats[0]?.totalSubscriptions || 0),
           pendingAmount: Number(stats[0]?.pendingAmount || 0),
         },
+        nextPayout: nextPayout || null,
+        dailyEarnings: dailyEarnings.map((day) => ({
+          date: day.date,
+          total: Number(day.total || 0),
+          tips: Number(day.tips || 0),
+          subscriptions: Number(day.subscriptions || 0),
+        })),
       };
     }),
 

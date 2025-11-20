@@ -1,26 +1,15 @@
-import Mux from "@mux/mux-node";
+/**
+ * Mux Client - DESHABILITADO
+ * 
+ * Este archivo ha sido deshabilitado debido a la migración de Mux a Amazon IVS y S3.
+ * 
+ * Los videos ahora se almacenan en S3 y las transmisiones en vivo se manejan con Amazon IVS.
+ * 
+ * Si necesitas procesar videos en el futuro, considera usar AWS MediaConvert
+ * para transcodificación, generación de thumbnails, etc.
+ */
 
-// Validar que las credenciales estén presentes antes de inicializar
-const tokenId = process.env.MUX_TOKEN_ID;
-const tokenSecret = process.env.MUX_TOKEN_SECRET;
+// Este archivo se mantiene para referencia histórica pero ya no se usa.
+// Puede ser eliminado en el futuro si se confirma que no hay dependencias.
 
-// Logs de depuración (temporal - eliminar después de verificar)
-console.log("🔍 [DEBUG] Mux Token ID present:", !!tokenId);
-console.log("🔍 [DEBUG] Mux Token Secret present:", !!tokenSecret);
-if (tokenId) {
-  console.log("🔍 [DEBUG] Mux Token ID length:", tokenId.length);
-}
-if (tokenSecret) {
-  console.log("🔍 [DEBUG] Mux Token Secret length:", tokenSecret.length);
-}
-
-if (!tokenId || !tokenSecret) {
-  console.warn(
-    "⚠️ Mux credentials are missing. Set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your .env.local file."
-  );
-}
-
-export const mux = new Mux({
-  tokenId: tokenId || "",
-  tokenSecret: tokenSecret || "",
-});
+export const mux = null;

@@ -185,3 +185,4 @@ Cuando estés listo para aceptar pagos reales:
 ¡Listo! Si completaste todos los pasos, tu integración de PayPal debería estar funcionando. 🎉
 
 
+

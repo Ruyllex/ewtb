@@ -5,17 +5,14 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, lt, or, sql, gte, inArray } from "drizzle-orm";
 import { subDays } from "date-fns";
 import { z } from "zod";
+import { getSignedDownloadUrl } from "@/lib/aws";
 
 const studioVideoSelect = {
   id: videos.id,
   title: videos.title,
   description: videos.description,
-  muxStatus: videos.muxStatus,
-  muxAssetId: videos.muxAssetId,
-  muxUploadId: videos.muxUploadId,
-  muxPlaybackId: videos.muxPlaybackId,
-  muxTrackId: videos.muxTrackId,
-  muxTrackStatus: videos.muxTrackStatus,
+  s3Key: videos.s3Key,
+  s3Url: videos.s3Url,
   thumbnailUrl: videos.thumbnailUrl,
   thumbnailKey: videos.thumbnailKey,
   previewUrl: videos.previewUrl,
@@ -82,20 +79,25 @@ async function fetchCountsForVideos(videoIds: string[]) {
 export const studioRouter = createTRPCRouter({
   getOne: protectedProcedure.input(z.object({ id: z.string().uuid() })).query(async ({ ctx, input }) => {
     try {
-      const { id: userId, clerkId } = ctx.user;
+      const userId = ctx.user.id;
 
       const [video] = await db
         .select(studioVideoSelect)
         .from(videos)
-        .innerJoin(users, eq(videos.userId, users.id))
-        .where(and(eq(videos.id, id), eq(users.clerkId, clerkId)))
+        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
         .limit(1);
       if (!video) throw new TRPCError({ code: "NOT_FOUND" });
 
       const { viewCounts, likeCounts, commentCounts } = await fetchCountsForVideos([video.id]);
 
+      // Generar URL firmada si hay s3Key
+      const signedS3Url = video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url;
+      const signedThumbnailUrl = video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl;
+
       return {
         ...video,
+        s3Url: signedS3Url,
+        thumbnailUrl: signedThumbnailUrl,
         viewCount: viewCounts.get(video.id) ?? 0,
         likeCount: likeCounts.get(video.id) ?? 0,
         commentCount: commentCounts.get(video.id) ?? 0,
@@ -120,35 +122,41 @@ export const studioRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { cursor, limit } = input;
-        const { clerkId } = ctx.user;
+        const userId = ctx.user.id;
+
+        console.log(`[studio.getMany] Fetching videos for userId: ${userId}`);
+
         const data = await db
           .select(studioVideoSelect)
           .from(videos)
-          .innerJoin(users, eq(videos.userId, users.id))
           .where(
             and(
-              eq(users.clerkId, clerkId),
+              eq(videos.userId, userId),
               cursor
                 ? or(
-                    lt(videos.updatedAt, cursor.updatedAt),
-                    and(eq(videos.updatedAt, cursor.updatedAt), eq(videos.id, cursor.id))
-                  )
+                  lt(videos.updatedAt, cursor.updatedAt),
+                  and(eq(videos.updatedAt, cursor.updatedAt), eq(videos.id, cursor.id))
+                )
                 : undefined
             )
           )
           .orderBy(desc(videos.updatedAt), desc(videos.id))
           .limit(limit + 1);
 
+        console.log(`[studio.getMany] Found ${data.length} videos`);
+
         const hasMore = data.length > limit;
         const items = hasMore ? data.slice(0, -1) : data;
 
         const { viewCounts, likeCounts, commentCounts } = await fetchCountsForVideos(items.map((v) => v.id));
-        const enrichedItems = items.map((video) => ({
+        const enrichedItems = await Promise.all(items.map(async (video) => ({
           ...video,
+          s3Url: video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url,
+          thumbnailUrl: video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl,
           viewCount: viewCounts.get(video.id) ?? 0,
           likeCount: likeCounts.get(video.id) ?? 0,
           commentCount: commentCounts.get(video.id) ?? 0,
-        }));
+        })));
 
         // Set the next cursor
         const lastItem = items[items.length - 1];

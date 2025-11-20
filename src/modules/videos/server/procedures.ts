@@ -1,20 +1,12 @@
 import { db } from "@/db";
 import { videos, videoUpdateSchema, views, users, channels, subscriptions } from "@/db/schema";
-import { mux } from "@/lib/mux";
+import { ensureAwsCredentials, getSignedUploadUrl, checkFileExists, getS3PublicUrl, getSignedDownloadUrl } from "@/lib/aws";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq, ilike, sql, desc, or, inArray } from "drizzle-orm";
 import { UTApi } from "uploadthing/server";
 import z from "zod";
-
-const ensureMuxCredentials = () => {
-  if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Missing Mux credentials. Set MUX_TOKEN_ID and MUX_TOKEN_SECRET.",
-    });
-  }
-};
+import { randomUUID } from "crypto";
 
 /**
  * Normaliza avatares para que Next/Image los pueda consumir:
@@ -65,28 +57,19 @@ export const videosRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND" });
       }
 
-      if (!existingVideo.muxPlaybackId) {
-        throw new TRPCError({ code: "BAD_REQUEST" });
+      if (!existingVideo.s3Key) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Video does not have an S3 key. Cannot restore thumbnail."
+        });
       }
 
-      const tempthumbnailUrl = `https://image.mux.com/${existingVideo.muxPlaybackId}/thumbnail.png`;
-
-      const utapi = new UTApi();
-      const uploadedThumbnail = await utapi.uploadFilesFromUrl(tempthumbnailUrl);
-
-      if (!uploadedThumbnail.data) {
-        throw new TRPCError({ code: "BAD_REQUEST" });
-      }
-
-      const { key: thumbnailKey, ufsUrl: thumbnailUrl } = uploadedThumbnail.data;
-
-      const [updatedVideo] = await db
-        .update(videos)
-        .set({ thumbnailUrl, thumbnailKey })
-        .where(and(eq(videos.id, input.id), eq(videos.userId, userId)))
-        .returning();
-
-      return updatedVideo;
+      // Para videos en S3, no podemos generar thumbnails automáticamente
+      // El usuario deberá subir uno manualmente
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Thumbnail restoration is not available for S3 videos. Please upload a thumbnail manually."
+      });
     }),
 
   remove: protectedProcedure.input(z.object({ id: z.uuid() })).mutation(async ({ ctx, input }) => {
@@ -130,56 +113,49 @@ export const videosRouter = createTRPCRouter({
     return updatedVideo;
   }),
 
-  create: protectedProcedure.mutation(async ({ ctx }) => {
-    const { id: userId } = ctx.user;
+  create: protectedProcedure
+    .input(z.object({ contentType: z.string().default("video/mp4") }))
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
 
-    try {
-      ensureMuxCredentials();
+      try {
+        ensureAwsCredentials();
 
-      const upload = await mux.video.uploads.create({
-        new_asset_settings: {
-          passthrough: userId,
-          playback_policies: ["public"],
-          static_renditions: [
-            {
-              resolution: "highest",
-            },
-            {
-              resolution: "audio-only",
-            },
-          ],
-          input: [
-            {
-              generated_subtitles: [
-                {
-                  language_code: "en",
-                  name: "English",
-                },
-              ],
-            },
-          ],
-        },
-        cors_origin: "*", // TODO: In production this should be restricted to the domain of the app
-      });
+        // Generar una clave única para el archivo en S3
+        // Formato: videos/{userId}/{uuid}.{ext} (el cliente puede determinar la extensión)
+        // Intentar determinar la extensión basada en el contentType
+        const ext = input.contentType.split("/")[1] || "mp4";
+        const s3Key = `videos/${userId}/${randomUUID()}.${ext}`;
 
-      // NO crear el video en BD todavía, solo retornar el upload info
-      return {
-        uploadId: upload.id,
-        url: upload.url,
-      };
-    } catch (error) {
-      console.error("Failed to create Mux upload", error);
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Unable to create upload. Check your Mux credentials and quota.",
-      });
-    }
-  }),
+        // Generar URL firmada para subir el archivo
+        // El tipo MIME será determinado por el cliente
+        const signedUrl = await getSignedUploadUrl(s3Key, input.contentType, 3600); // 1 hora de validez
+
+        // Retornar la información de upload
+        // uploadId será la s3Key para poder verificar después
+        return {
+          uploadId: s3Key, // Usamos la s3Key como uploadId para identificarlo después
+          url: signedUrl,
+        };
+      } catch (error) {
+        console.error("Failed to create S3 upload URL", error);
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Unable to create upload: ${error.message}`,
+          });
+        }
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Unable to create upload. Check your AWS credentials and S3 bucket configuration.",
+        });
+      }
+    }),
 
   finalize: protectedProcedure
     .input(
       z.object({
-        uploadId: z.string(),
+        uploadId: z.string(), // En S3, esto es la s3Key
         title: z.string().min(1).max(100),
         description: z.string().max(5000).optional(),
         categoryId: z.string().uuid().optional(),
@@ -189,33 +165,27 @@ export const videosRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { id: userId } = ctx.user;
 
-      // Verificar que el upload existe y obtener el asset
       try {
-        const upload = await mux.video.uploads.retrieve(input.uploadId);
+        ensureAwsCredentials();
 
-        if (!upload.asset_id) {
+        // En S3, uploadId es la s3Key
+        const s3Key = input.uploadId;
+
+        // Verificar que el archivo existe en S3
+        const fileExists = await checkFileExists(s3Key);
+
+        if (!fileExists) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: "Video is still processing. Please wait until the upload is complete.",
+            message: "Video file not found in S3. Please ensure the upload completed successfully.",
           });
         }
 
-        // Obtener el asset para verificar que está listo
-        const asset = await mux.video.assets.retrieve(upload.asset_id);
-        const playbackId = asset.playback_ids?.[0]?.id;
-
-        if (!playbackId) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Video is not ready yet. Please wait a moment and try again.",
-          });
-        }
-
-        // Verificar que no existe ya un video con este uploadId
+        // Verificar que no existe ya un video con esta s3Key
         const existingVideo = await db
           .select()
           .from(videos)
-          .where(eq(videos.muxUploadId, input.uploadId))
+          .where(eq(videos.s3Key, s3Key))
           .limit(1);
 
         if (existingVideo.length > 0) {
@@ -225,11 +195,12 @@ export const videosRouter = createTRPCRouter({
           });
         }
 
-        // Crear el video en la BD con los datos del formulario
-        const duration = asset.duration ? Math.round(asset.duration * 1000) : 0;
-        const thumbnailUrl = `https://image.mux.com/${playbackId}/thumbnail.png`;
-        const previewUrl = `https://image.mux.com/${playbackId}/animated.gif`;
+        // Generar URL pública del video
+        const s3Url = getS3PublicUrl(s3Key);
 
+        // Crear el video en la BD con los datos del formulario
+        // Nota: Para duración y thumbnails, estos deberán ser generados por el cliente
+        // o usando servicios adicionales (como AWS MediaConvert para generar thumbnails)
         const [video] = await db
           .insert(videos)
           .values({
@@ -238,13 +209,9 @@ export const videosRouter = createTRPCRouter({
             description: input.description || null,
             categoryId: input.categoryId || null,
             visibility: input.visibility,
-            muxUploadId: input.uploadId,
-            muxAssetId: asset.id,
-            muxPlaybackId: playbackId,
-            muxStatus: asset.status,
-            thumbnailUrl,
-            previewUrl,
-            duration,
+            s3Key,
+            s3Url,
+            duration: 0, // Se puede actualizar después si se calcula la duración
           })
           .returning();
 
@@ -254,6 +221,12 @@ export const videosRouter = createTRPCRouter({
           throw error;
         }
         console.error("Failed to finalize video", error);
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Unable to finalize video: ${error.message}`,
+          });
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Unable to finalize video. Please try again.",
@@ -262,35 +235,49 @@ export const videosRouter = createTRPCRouter({
     }),
 
   getUploadStatus: protectedProcedure
-    .input(z.object({ uploadId: z.string() }))
+    .input(z.object({ uploadId: z.string() })) // En S3, esto es la s3Key
     .query(async ({ input }) => {
       try {
-        ensureMuxCredentials();
-        const upload = await mux.video.uploads.retrieve(input.uploadId);
+        ensureAwsCredentials();
 
-        if (!upload.asset_id) {
+        const s3Key = input.uploadId;
+
+        // Verificar si el archivo existe en S3
+        const fileExists = await checkFileExists(s3Key);
+
+        if (!fileExists) {
           return {
-            status: upload.status,
+            status: "uploading",
             assetId: null,
             playbackId: null,
             ready: false,
+            duration: 0,
+            thumbnailUrl: null,
+            previewUrl: null,
           };
         }
 
-        const asset = await mux.video.assets.retrieve(upload.asset_id);
-        const playbackId = asset.playback_ids?.[0]?.id;
+        // Si el archivo existe, está listo
+        // Generar URL firmada para el preview (ya que el bucket es privado)
+        const s3Url = await getSignedDownloadUrl(s3Key);
 
         return {
-          status: asset.status,
-          assetId: asset.id,
-          playbackId,
-          ready: asset.status === "ready" && !!playbackId,
-          duration: asset.duration ? Math.round(asset.duration * 1000) : 0,
-          thumbnailUrl: playbackId ? `https://image.mux.com/${playbackId}/thumbnail.png` : null,
-          previewUrl: playbackId ? `https://image.mux.com/${playbackId}/animated.gif` : null,
+          status: "ready",
+          assetId: s3Key, // Usamos s3Key como assetId
+          playbackId: s3Url, // Usamos s3Url como playbackId para el player
+          ready: true,
+          duration: 0, // Se puede calcular después si es necesario
+          thumbnailUrl: null, // El usuario debe subir un thumbnail manualmente
+          previewUrl: null,
         };
       } catch (error) {
         console.error("Failed to get upload status", error);
+        if (error instanceof Error) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: `Unable to get upload status: ${error.message}`,
+          });
+        }
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Unable to get upload status",
@@ -337,8 +324,10 @@ export const videosRouter = createTRPCRouter({
           title: videos.title,
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
+          thumbnailKey: videos.thumbnailKey,
           previewUrl: videos.previewUrl,
-          muxPlaybackId: videos.muxPlaybackId,
+          s3Url: videos.s3Url,
+          s3Key: videos.s3Key,
           duration: videos.duration,
           createdAt: videos.createdAt,
 
@@ -363,14 +352,16 @@ export const videosRouter = createTRPCRouter({
       const items = hasMore ? results.slice(0, -1) : results;
 
       // Normalizar y construir objeto channel en cada item
-      const normalized = items.map((item) => ({
+      const normalized = await Promise.all(items.map(async (item) => ({
         ...item,
+        s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
+        thumbnailUrl: item.thumbnailKey ? await getSignedDownloadUrl(item.thumbnailKey) : item.thumbnailUrl,
         channel: {
           username: item.userUsername ?? null, // username del owner (guardado en users.username)
           name: item.channelName ?? null,
           avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
         },
-      }));
+      })));
 
       const lastItem = items[items.length - 1];
       const nextCursor = hasMore && lastItem
@@ -392,7 +383,9 @@ export const videosRouter = createTRPCRouter({
           title: videos.title,
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
-          muxPlaybackId: videos.muxPlaybackId,
+          thumbnailKey: videos.thumbnailKey,
+          s3Url: videos.s3Url,
+          s3Key: videos.s3Key,
           duration: videos.duration,
           visibility: videos.visibility,
           createdAt: videos.createdAt,
@@ -434,8 +427,14 @@ export const videosRouter = createTRPCRouter({
         viewCount = 0;
       }
 
+      // Generar URL firmada si hay s3Key
+      const signedS3Url = video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url;
+      const signedThumbnailUrl = video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl;
+
       return {
         ...video,
+        s3Url: signedS3Url,
+        thumbnailUrl: signedThumbnailUrl,
         viewCount,
         channel: {
           username: video.userUsername ?? null,
@@ -478,7 +477,8 @@ export const videosRouter = createTRPCRouter({
           title: videos.title,
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
-          muxPlaybackId: videos.muxPlaybackId,
+          s3Url: videos.s3Url,
+          s3Key: videos.s3Key,
           duration: videos.duration,
           createdAt: videos.createdAt,
           userId: videos.userId,
@@ -633,7 +633,8 @@ export const videosRouter = createTRPCRouter({
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
           previewUrl: videos.previewUrl,
-          muxPlaybackId: videos.muxPlaybackId,
+          s3Url: videos.s3Url,
+          s3Key: videos.s3Key,
           duration: videos.duration,
           createdAt: videos.createdAt,
           userId: users.id,

@@ -237,7 +237,6 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
       </div>
       <div className="absolute top-0 right-0 p-4">
         {/* Solo para fines de depuración, mantener o remover según necesidad */}
-        {process.env.NODE_ENV !== 'production' && <span className="text-xs text-white bg-black/50 p-1 rounded">Debug: Tkn ID: {process.env.NEXT_PUBLIC_MUX_TOKEN_ID ? 'Sí' : 'No'}</span>}
       </div>
 
       {/* Monetization Modal */}

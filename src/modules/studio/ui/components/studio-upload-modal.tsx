@@ -65,12 +65,13 @@ export const StudioUploadModal = () => {
           }
         }}
       >
-        {step === "uploading" && uploadId && uploadUrl && (
+        {step === "uploading" && (
           <div className="space-y-4">
             <StudioUploader
               endpoint={uploadUrl}
               uploadId={uploadId}
               onUploadComplete={handleUploadComplete}
+              onFileSelect={(file) => create.mutate({ contentType: file.type || "video/mp4" })}
             />
           </div>
         )}
@@ -88,7 +89,7 @@ export const StudioUploadModal = () => {
 
       <Button
         variant={"secondary"}
-        onClick={() => create.mutate()}
+        onClick={() => setStep("uploading")}
         className="cursor-pointer"
         disabled={create.isPending || isOpen}
       >

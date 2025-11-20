@@ -1,203 +1,173 @@
 "use client";
-import { InfiniteScroll } from "@/components/infinite-scroll";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DEFAULT_LIMIT } from "@/constants";
-import { snakeCaseToTitleCase } from "@/lib/utils";
-import { VideoThumbnail } from "@/modules/videos/ui/components/video-thumbnail";
-import { api } from "@/trpc/client";
-import { format } from "date-fns";
-import { ErrorBoundary } from "react-error-boundary";
 
-import { Skeleton } from "@/components/ui/skeleton";
-import { GlobeIcon, LockIcon } from "lucide-react";
+import { api } from "@/trpc/client";
 import Link from "next/link";
-import { Suspense, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
+import { es } from "date-fns/locale";
+import { Edit2Icon, EyeIcon, HeartIcon, MessageSquareIcon, Loader2Icon } from "lucide-react";
+import Image from "next/image";
+
+const THUMBNAIL_FALLBACK = "/placeholder-thumbnail.jpg";
 
 export const VideosSection = () => {
-  return (
-    <Suspense fallback={<VideoSectionSkeleton />}>
-      <ErrorBoundary
-        fallback={
-          <div className="border-y p-8 text-center">
-            <p className="text-muted-foreground">
-              Error al cargar los videos. Por favor, recarga la página.
-            </p>
-          </div>
-        }
-      >
-        <VideosSectionSuspense />
-      </ErrorBoundary>
-    </Suspense>
-  );
-};
+  const { data, isLoading, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    api.studio.getMany.useInfiniteQuery(
+      { limit: 10 },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+      }
+    );
 
-const VideoSectionSkeleton = () => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2Icon className="animate-spin size-8 text-muted-foreground" />
+        <span className="ml-3 text-muted-foreground">Cargando videos...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-destructive font-medium">Error al cargar videos</p>
+        <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
+      </div>
+    );
+  }
+
+  const allVideos = data?.pages.flatMap((page) => page.items) ?? [];
+
+  if (allVideos.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground text-lg">No tienes videos subidos aún</p>
+        <p className="text-sm text-muted-foreground mt-2">
+          Haz clic en "Subir Video" para comenzar
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <div className="border-y">
+    <div className="space-y-4">
+      <h2 className="text-2xl font-bold">Tus Videos</h2>
+
+      <div className="border rounded-lg overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-6 w-[510px]">Video</TableHead>
-              <TableHead>Visibility</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="">Views</TableHead>
-              <TableHead className="">Comments</TableHead>
-              <TableHead className="">Likes</TableHead>
+              <TableHead className="w-[300px]">Video</TableHead>
+              <TableHead>Visibilidad</TableHead>
+              <TableHead className="text-center">Vistas</TableHead>
+              <TableHead className="text-center">Me gusta</TableHead>
+              <TableHead className="text-center">Comentarios</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 4 }).map((_, index) => (
-              <TableRow key={index}>
-                <TableCell className="pl-6">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="h-20 w-36" />
-                    <div className="flex flex-col gap-2">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="h-3 w-64" />
+            {allVideos.map((video) => (
+              <TableRow key={video.id} className="cursor-pointer hover:bg-muted/50">
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-24 h-16 flex-shrink-0 rounded overflow-hidden bg-muted">
+                      {video.thumbnailUrl ? (
+                        <Image
+                          src={video.thumbnailUrl}
+                          alt={video.title}
+                          fill
+                          className="object-cover"
+                          sizes="96px"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                          <EyeIcon className="size-6" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{video.title}</p>
+                      {video.description && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {video.description}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </TableCell>
+
                 <TableCell>
-                  <div className="flex items-center">
-                    <GlobeIcon className="size-4 mr-2" />
-                    Public
+                  <Badge variant={video.visibility === "public" ? "default" : "secondary"}>
+                    {video.visibility === "public" ? "Público" : "Privado"}
+                  </Badge>
+                </TableCell>
+
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <EyeIcon className="size-4 text-muted-foreground" />
+                    <span>{video.viewCount ?? 0}</span>
                   </div>
                 </TableCell>
-                <TableCell>Ready</TableCell>
-                <TableCell>
-                  <Skeleton className="h-3 w-16" />
+
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <HeartIcon className="size-4 text-muted-foreground" />
+                    <span>{video.likeCount ?? 0}</span>
+                  </div>
                 </TableCell>
-                <TableCell>
-                  <Skeleton className="h-3 w-10" />
+
+                <TableCell className="text-center">
+                  <div className="flex items-center justify-center gap-1">
+                    <MessageSquareIcon className="size-4 text-muted-foreground" />
+                    <span>{video.commentCount ?? 0}</span>
+                  </div>
                 </TableCell>
+
                 <TableCell>
-                  <Skeleton className="h-3 w-16" />
+                  <span className="text-sm text-muted-foreground">
+                    {formatDistanceToNow(new Date(video.updatedAt), {
+                      addSuffix: true,
+                      locale: es,
+                    })}
+                  </span>
                 </TableCell>
-                <TableCell>
-                  <Skeleton className="h-3 w-10" />
+
+                <TableCell className="text-right">
+                  <Link href={`/studio/videos/${video.id}`}>
+                    <Button variant="ghost" size="sm">
+                      <Edit2Icon className="size-4 mr-2" />
+                      Editar
+                    </Button>
+                  </Link>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-    </>
-  );
-};
 
-export const VideosSectionSuspense = () => {
-  const {
-    data: videos,
-    hasNextPage,
-    isFetchingNextPage,
-    fetchNextPage,
-    refetch,
-  } = api.studio.getMany.useSuspenseInfiniteQuery(
-    { limit: DEFAULT_LIMIT },
-    {
-      getNextPageParam(lastPage) {
-        return lastPage.nextCursor;
-      },
-    }
-  );
-
-  const videoPages = videos?.pages ?? [];
-
-  const shouldPoll = videoPages.some((page) =>
-    page.items.some(
-      (video) =>
-        [video.muxStatus, video.muxTrackStatus].some((status) => status && status !== "ready") ||
-        !video.thumbnailUrl ||
-        !video.previewUrl ||
-        !video.muxPlaybackId
-    )
-  );
-
-  useEffect(() => {
-    if (!shouldPoll) return;
-    const intervalId = setInterval(() => {
-      void refetch();
-    }, 5000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [shouldPoll, refetch]);
-
-  return (
-    <div>
-      <div className="border-y">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="pl-6 w-[510px]">Video</TableHead>
-              <TableHead>Visibility</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead className="">Views</TableHead>
-              <TableHead className="">Comments</TableHead>
-              <TableHead className="">Likes</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {videoPages
-              .flatMap((page) => page.items)
-              .map((video) => (
-                <TableRow key={video.id} className="cursor-pointer">
-                  <TableCell>
-                    <Link href={`/studio/videos/${video.id}`} prefetch className="block">
-                      <div className="flex items-center gap-4">
-                        <div className="relative aspect-video w-36 shrink-0">
-                          <VideoThumbnail
-                            imageUrl={video.thumbnailUrl}
-                            previewUrl={video.previewUrl}
-                            title={video.title}
-                            duration={video.duration || 0}
-                          />
-                        </div>
-                        <div className="flex flex-col overflow-hidden gap-y-1">
-                          <span className="text-sm text-muted-foreground line-clamp-1">
-                            {video.title}
-                          </span>
-                          <span className="text-xs line-clamp-1">
-                            {video.description || "No description"}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      {video.visibility === "private" ? (
-                        <LockIcon className="size-4 mr-2" />
-                      ) : (
-                        <GlobeIcon className="size-4 mr-2" />
-                      )}
-                      {snakeCaseToTitleCase(video.visibility)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm truncate">
-                    <div className="flex items-center">
-                      {snakeCaseToTitleCase(video.muxStatus || "error loading")}
-                    </div>
-                  </TableCell>
-                  <TableCell>{format(video.createdAt, "d MMM yyyy")}</TableCell>
-                  <TableCell>Views</TableCell>
-                  <TableCell>Comments</TableCell>
-                  <TableCell>Likes</TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </div>
-      <InfiniteScroll
-        isManual
-        hasNextPage={hasNextPage}
-        isFetchingNextPage={isFetchingNextPage}
-        fetchNextPage={fetchNextPage}
-      />
+      {hasNextPage && (
+        <div className="flex justify-center pt-4">
+          <Button
+            variant="outline"
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+          >
+            {isFetchingNextPage ? (
+              <>
+                <Loader2Icon className="animate-spin size-4 mr-2" />
+                Cargando...
+              </>
+            ) : (
+              "Cargar más"
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 };

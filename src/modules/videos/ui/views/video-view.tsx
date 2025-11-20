@@ -107,9 +107,10 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
             {/* Video player */}
             <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-sm">
               <VideoPlayer
-                playbackId={video.muxPlaybackId}
+                playbackId={video.s3Url}
                 thumbnailUrl={video.thumbnailUrl}
                 autoPlay={false}
+                streamType="on-demand"
                 onPlay={() => {
                   // Record view when user plays the video
                   recordView.mutate({ videoId });

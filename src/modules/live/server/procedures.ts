@@ -1,19 +1,10 @@
 import { db } from "@/db";
 import { liveStreams, subscriptions, channels, users } from "@/db/schema";
-import { mux } from "@/lib/mux";
+import { ensureAwsCredentials, createIVSChannel, deleteIVSChannel, getIVSChannel } from "@/lib/aws";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
 import z from "zod";
-
-const ensureMuxCredentials = () => {
-  if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Missing Mux credentials. Set MUX_TOKEN_ID and MUX_TOKEN_SECRET.",
-    });
-  }
-};
 
 export const liveRouter = createTRPCRouter({
   create: protectedProcedure
@@ -27,25 +18,16 @@ export const liveRouter = createTRPCRouter({
       const { id: userId } = ctx.user;
 
       try {
-        ensureMuxCredentials();
+        ensureAwsCredentials();
 
-        // Crear live stream en Mux
-        // Siguiendo las mejores prácticas de Mux para live streaming
-        const liveStream = await mux.video.liveStreams.create({
-          playback_policy: ["public"],
-          new_asset_settings: {
-            playback_policy: ["public"],
-          },
-          // Opciones adicionales recomendadas por Mux
-          reduced_latency: true, // Reducir latencia para transmisiones en vivo
-          reconnect_window: 60, // Ventana de reconexión en segundos
-          passthrough: userId, // Metadata personalizada para identificar el usuario
-        });
+        // Crear canal IVS para transmisión en vivo
+        const channelName = `${input.title}-${Date.now()}`;
+        const ivsChannel = await createIVSChannel(channelName);
 
-        if (!liveStream.stream_key || !liveStream.playback_ids?.[0]?.id) {
+        if (!ivsChannel.streamKey || !ivsChannel.playbackUrl || !ivsChannel.ingestEndpoint) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to create live stream. Missing stream key or playback ID.",
+            message: "Failed to create IVS channel. Missing stream key, playback URL, or ingest endpoint.",
           });
         }
 
@@ -57,9 +39,10 @@ export const liveRouter = createTRPCRouter({
               userId,
               title: input.title,
               description: input.description || null,
-              streamKey: liveStream.stream_key,
-              playbackId: liveStream.playback_ids[0].id,
-              muxLiveStreamId: liveStream.id,
+              ivsChannelArn: ivsChannel.channelArn || null,
+              ivsStreamKey: ivsChannel.streamKey,
+              ivsPlaybackUrl: ivsChannel.playbackUrl,
+              ivsIngestEndpoint: ivsChannel.ingestEndpoint,
               status: "idle",
             })
             .returning();
@@ -80,44 +63,30 @@ export const liveRouter = createTRPCRouter({
         const { logServer } = await import("@/lib/logtail");
         logServer.error("Failed to create live stream", error instanceof Error ? error : new Error(String(error)), {
           message: error?.message,
-          status: error?.response?.status || error?.status,
-          statusText: error?.response?.statusText,
-          data: error?.response?.data,
-          hasTokenId: !!process.env.MUX_TOKEN_ID,
-          hasTokenSecret: !!process.env.MUX_TOKEN_SECRET,
+          status: error?.$metadata?.httpStatusCode,
+          data: error?.$metadata,
+          hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
+          hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
+          hasBucket: !!process.env.AWS_S3_BUCKET_NAME,
           userId,
         });
         
         // Verificar si las credenciales están presentes
-        if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+        if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Mux credentials are missing. Please set MUX_TOKEN_ID and MUX_TOKEN_SECRET in your .env.local file.",
+            message: "AWS credentials are missing. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your .env.local file.",
           });
         }
 
-        // Manejar errores específicos de Mux API
-        const status = error?.response?.status || error?.status;
-        const errorMessage = error?.response?.data?.error?.message || error?.message || "Unknown error";
+        // Manejar errores específicos de AWS IVS
+        const status = error?.$metadata?.httpStatusCode;
+        const errorMessage = error?.message || "Unknown error";
 
-        if (status === 401) {
+        if (status === 401 || status === 403) {
           throw new TRPCError({
             code: "UNAUTHORIZED",
-            message: "Invalid Mux credentials. Please verify your MUX_TOKEN_ID and MUX_TOKEN_SECRET are correct.",
-          });
-        }
-
-        if (status === 403) {
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Mux credentials don't have permission to create live streams. Check your Mux account permissions and plan.",
-          });
-        }
-
-        if (status === 400 && (errorMessage?.includes("free plan") || errorMessage?.includes("unavailable"))) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Live Streaming no está habilitado en tu cuenta. El plan gratuito incluye $20 de créditos de prueba. Ve a https://dashboard.mux.com/settings/live-streaming para habilitar Live Streaming y activar tus créditos de prueba.",
+            message: "Invalid AWS credentials. Please verify your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct and have IVS permissions.",
           });
         }
 
@@ -128,7 +97,7 @@ export const liveRouter = createTRPCRouter({
           });
         }
 
-        // Si el error tiene un mensaje específico de Mux, usarlo
+        // Si el error tiene un mensaje específico, usarlo
         if (errorMessage && errorMessage !== "Unknown error") {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
@@ -139,7 +108,7 @@ export const liveRouter = createTRPCRouter({
         // Error genérico como último recurso
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Unable to create live stream. ${status ? `Status: ${status}. ` : ""}Check your Mux credentials, account status, and that Live Streaming is enabled in your Mux account.`,
+          message: `Unable to create live stream. ${status ? `Status: ${status}. ` : ""}Check your AWS credentials, account status, and that IVS is enabled in your AWS account.`,
         });
       }
     }),
@@ -235,14 +204,14 @@ export const liveRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
-      // Eliminar de Mux si existe
-      if (stream.muxLiveStreamId) {
+      // Eliminar canal IVS si existe
+      if (stream.ivsChannelArn) {
         try {
-          ensureMuxCredentials();
-          await mux.video.liveStreams.delete(stream.muxLiveStreamId);
+          ensureAwsCredentials();
+          await deleteIVSChannel(stream.ivsChannelArn);
         } catch (error) {
-          console.error("Failed to delete live stream from Mux", error);
-          // Continuar con la eliminación en BD aunque falle en Mux
+          console.error("Failed to delete IVS channel", error);
+          // Continuar con la eliminación en BD aunque falle en IVS
         }
       }
 
@@ -263,27 +232,36 @@ export const liveRouter = createTRPCRouter({
         .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
         .limit(1);
 
-      if (!stream || !stream.muxLiveStreamId) {
+      if (!stream || !stream.ivsChannelArn) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
       try {
-        ensureMuxCredentials();
-        const muxStream = await mux.video.liveStreams.retrieve(stream.muxLiveStreamId);
+        ensureAwsCredentials();
+        const ivsChannel = await getIVSChannel(stream.ivsChannelArn);
+
+        // Mapear el estado de IVS al estado interno
+        // IVS tiene: "Idle", "Connected", "Streaming"
+        let status = "idle";
+        if (ivsChannel.health === "Streaming") {
+          status = "active";
+        } else if (ivsChannel.health === "Connected") {
+          status = "connected";
+        }
 
         // Actualizar estado en BD
         await db
           .update(liveStreams)
           .set({
-            status: muxStream.status || "idle",
+            status,
             updatedAt: new Date(),
           })
           .where(eq(liveStreams.id, input.id));
 
         return {
-          status: muxStream.status || "idle",
-          streamKey: stream.streamKey,
-          playbackId: stream.playbackId,
+          status,
+          streamKey: stream.ivsStreamKey,
+          playbackUrl: stream.ivsPlaybackUrl,
         };
       } catch (error) {
         console.error("Failed to get live stream status", error);
@@ -324,7 +302,7 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackId: liveStreams.playbackId,
+          playbackUrl: liveStreams.ivsPlaybackUrl,
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
           userId: users.id,
@@ -408,7 +386,7 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackId: liveStreams.playbackId,
+          playbackUrl: liveStreams.ivsPlaybackUrl,
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
           userId: users.id,

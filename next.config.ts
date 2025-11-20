@@ -5,11 +5,12 @@ const baseConfig: NextConfig = {
   output: "standalone",
   images: {
     remotePatterns: [
-      { protocol: "https", hostname: "stream.mux.com" },
-      { protocol: "https", hostname: "image.mux.com" },
       { protocol: "https", hostname: "img.clerk.com" },
       { protocol: "https", hostname: "tbw27c7h9z.ufs.sh" },
       { protocol: "https", hostname: "utfs.io", pathname: "/f/**" },
+      // S3 y CloudFront para videos
+      { protocol: "https", hostname: "*.s3.*.amazonaws.com" },
+      { protocol: "https", hostname: "*.cloudfront.net" },
     ],
   },
   typescript: { ignoreBuildErrors: true },

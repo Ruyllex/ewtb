@@ -7,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { RadioIcon } from "lucide-react";
-import MuxPlayer from "@mux/mux-player-react";
+import VideoPlayer from "@/modules/videos/ui/components/video-player";
 
 interface ChannelLiveStreamsProps {
   username: string;
@@ -59,15 +59,10 @@ export const ChannelLiveStreams = ({ username }: ChannelLiveStreamsProps) => {
         <Link key={stream.id} href={`/studio/live/${stream.id}`}>
           <Card className="group hover:shadow-lg transition-shadow">
             <div className="relative aspect-video w-full bg-black rounded-t-lg overflow-hidden">
-              {stream.playbackId ? (
-                <MuxPlayer
+              {stream.ivsPlaybackUrl ? (
+                <VideoPlayer
+                  playbackId={stream.ivsPlaybackUrl}
                   streamType="live"
-                  playbackId={stream.playbackId}
-                  metadata={{
-                    video_id: stream.id,
-                    video_title: stream.title,
-                  }}
-                  className="w-full h-full"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-muted">
