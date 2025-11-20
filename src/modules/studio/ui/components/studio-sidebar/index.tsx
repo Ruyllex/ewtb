@@ -24,16 +24,16 @@ export const StudioSidebar = () => {
   }, []);
 
   return (
-    <Sidebar className="pt-16 z-40" collapsible="icon">
-      <SidebarContent className="bg-background">
+    <Sidebar className="pt-16 z-40 border-none" collapsible="icon">
+      <SidebarContent className="bg-transparent">
         <SidebarGroup>
           <SidebarMenu>
             <StudioSidebarHeader />
             <SidebarMenuItem>
               <SidebarMenuButton isActive={mounted && pathname === "/studio"} tooltip={"Content"} asChild>
-                <Link href={"/studio"} prefetch>
-                  <VideoIcon className="size-5" />
-                  <span className="text-sm">Content</span>
+                <Link href={"/studio"} prefetch className="text-white">
+                  <VideoIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Content</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -43,9 +43,9 @@ export const StudioSidebar = () => {
                 tooltip={"Live Streams"}
                 asChild
               >
-                <Link href={"/studio/live"} prefetch>
-                  <RadioIcon className="size-5" />
-                  <span className="text-sm">Live Streams</span>
+                <Link href={"/studio/live"} prefetch className="text-white">
+                  <RadioIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Live Streams</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -55,9 +55,9 @@ export const StudioSidebar = () => {
                 tooltip={"Earnings"}
                 asChild
               >
-                <Link href={"/studio/earnings"} prefetch>
-                  <DollarSignIcon className="size-5" />
-                  <span className="text-sm">Earnings</span>
+                <Link href={"/studio/earnings"} prefetch className="text-white">
+                  <DollarSignIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Earnings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -67,18 +67,18 @@ export const StudioSidebar = () => {
                 tooltip={"Settings"}
                 asChild
               >
-                <Link href={"/studio/settings"} prefetch>
-                  <SettingsIcon className="size-5" />
-                  <span className="text-sm">Settings</span>
+                <Link href={"/studio/settings"} prefetch className="text-white">
+                  <SettingsIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Settings</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
                 <Separator />
             <SidebarMenuItem>
               <SidebarMenuButton tooltip={"Exit studio"} asChild>
-                <Link href={"/"} prefetch>
-                  <LogOutIcon className="size-5" />
-                  <span className="text-sm">Exit studio</span>
+                <Link href={"/"} prefetch className="text-white">
+                  <LogOutIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Exit studio</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

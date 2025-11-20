@@ -29,7 +29,7 @@ export const StudioSidebarHeader = () => {
           className="flex items-center gap-2"
         >
           <UserAvatar imageUrl={user?.imageUrl} name={user?.fullName ?? "User"} size={"xs"} />
-          <span className="text-sm">Your Profile</span>
+          <span className="text-sm text-white">Your Profile</span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -49,8 +49,8 @@ export const StudioSidebarHeader = () => {
         />
       </div>
       <div className="flex flex-col items-center mt-2 gap-y-1">
-        <p className="text-sm  font-medium">Your Profile</p>
-        <p className="text-xs text-muted-foreground">{user.fullName}</p>
+        <p className="text-sm font-medium text-white">Your Profile</p>
+        <p className="text-xs text-white/70">{user.fullName}</p>
       </div>
     </SidebarHeader>
   );

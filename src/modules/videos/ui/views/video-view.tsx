@@ -23,22 +23,22 @@ interface VideoViewProps {
 
 const VideoViewSkeleton = () => {
   return (
-    <div className="bg-background">
+    <div className="bg-transparent">
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <div className="aspect-video rounded-xl bg-gray-200 animate-pulse" />
-            <div className="rounded-xl border bg-card p-4 sm:p-6 space-y-4">
-              <div className="h-8 w-3/4 rounded bg-gray-200 animate-pulse" />
-              <div className="h-4 w-1/2 rounded bg-gray-200 animate-pulse" />
-              <div className="h-20 rounded bg-gray-200 animate-pulse" />
+            <div className="aspect-video rounded-xl bg-white/10 animate-pulse" />
+            <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4 sm:p-6 space-y-4">
+              <div className="h-8 w-3/4 rounded bg-white/10 animate-pulse" />
+              <div className="h-4 w-1/2 rounded bg-white/10 animate-pulse" />
+              <div className="h-20 rounded bg-white/10 animate-pulse" />
             </div>
-            <div className="rounded-xl border bg-card p-4 sm:p-6 h-64 animate-pulse" />
+            <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4 sm:p-6 h-64 animate-pulse" />
           </div>
           <div className="lg:sticky lg:top-24">
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 rounded-xl border bg-card animate-pulse" />
+                <div key={i} className="h-32 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm animate-pulse" />
               ))}
             </div>
           </div>
@@ -99,7 +99,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
   }
 
   return (
-    <div className="bg-background">
+    <div className="bg-transparent min-h-screen">
       <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8 lg:py-10">
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
           {/* Main video section */}
@@ -118,11 +118,11 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
             </div>
 
             {/* Video info */}
-            <div className="space-y-6 rounded-xl border bg-card p-4 sm:p-6">
+            <div className="space-y-6 rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4 sm:p-6">
               <div>
-                <h1 className="text-2xl font-bold leading-tight text-foreground">{video.title}</h1>
+                <h1 className="text-2xl font-bold leading-tight text-white">{video.title}</h1>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/70">
                     <span>{video.viewCount} views</span>
                     <span className="text-base">•</span>
                     <span>{formatDistanceToNow(new Date(video.createdAt), { addSuffix: true })}</span>
@@ -156,14 +156,14 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                     {video.userUsername ? (
                       <Link href={`/channel/${video.userUsername}`} className="hover:opacity-80 transition-opacity">
                         <div className="flex items-center gap-2">
-                          <h3 className="truncate font-semibold text-foreground">{video.userName}</h3>
-                          {channel?.isVerified && <CheckCircle2 className="h-5 w-5 text-blue-500" />}
+                          <h3 className="truncate font-semibold text-white">{video.userName}</h3>
+                          {channel?.isVerified && <CheckCircle2 className="h-5 w-5 text-[#5ADBFD]" />}
                         </div>
                       </Link>
                     ) : (
-                      <h3 className="font-semibold text-foreground">{video.userName}</h3>
+                      <h3 className="font-semibold text-white">{video.userName}</h3>
                     )}
-                    <p className="text-sm text-muted-foreground">Creator</p>
+                    <p className="text-sm text-white/70">Creator</p>
                   </div>
                 </div>
 
@@ -203,23 +203,23 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
 
               {/* Description */}
               {video.description && (
-                <div className="rounded-xl border bg-muted/30 p-4 text-sm leading-relaxed text-foreground">
+                <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4 text-sm leading-relaxed text-white">
                   <p className="whitespace-pre-wrap">{video.description}</p>
                 </div>
               )}
             </div>
 
             {/* Comments Section */}
-            <div className="rounded-xl border bg-card p-4 sm:p-6">
+            <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4 sm:p-6">
               <CommentsSection videoId={videoId} />
             </div>
           </section>
 
           {/* Sidebar - Related videos (placeholder) */}
           <aside className="space-y-4 lg:sticky lg:top-24">
-            <div className="rounded-xl border bg-card p-4">
-              <h2 className="text-lg font-semibold">Videos relacionados</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Related videos coming soon...</p>
+            <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4">
+              <h2 className="text-lg font-semibold text-white">Videos relacionados</h2>
+              <p className="mt-2 text-sm text-white/70">Related videos coming soon...</p>
             </div>
           </aside>
         </div>

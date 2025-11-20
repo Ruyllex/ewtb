@@ -81,32 +81,34 @@ export const AdminDashboardView = () => {
     );
   }
 
-  if (!isAdmin) {
-    return null; // El useEffect redirigirá
-  }
+  if (!isAdmin) {
+    return <div></div>; // El useEffect redirigirá, pero necesitamos retornar un elemento válido
+  }
 
   const channels = channelsData?.pages.flatMap((page) => page.items) || [];
 
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">
       <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <ShieldCheckIcon className="h-8 w-8 text-blue-500" />
-          <h1 className="text-3xl font-bold">Dashboard Administrativo</h1>
-        </div>
-        <Button asChild variant="outline" className="gap-2">
-          <Link href="/admin/reports">
-            <AlertTriangle className="h-4 w-4" />
-            Ver Reportes
-          </Link>
-        </Button>
+        <div className="flex items-center gap-3">
+          <ShieldCheckIcon className="h-8 w-8 text-[#5ADBFD]" />
+          <h1 className="text-3xl font-bold text-white">Dashboard Administrativo</h1>
+        </div>
+        <Button asChild variant="outline" className="gap-2 border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]">
+          <Link href="/admin/reports">
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Ver Reportes
+            </span>
+          </Link>
+        </Button>
       </div>
 
       <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">Gestión de Canales</h2>
-        <p className="text-muted-foreground mb-6">
-          Verifica o desverifica canales. Los canales verificados mostrarán un check azul.
-        </p>
+        <h2 className="text-2xl font-semibold mb-4 text-white">Gestión de Canales</h2>
+        <p className="text-white/70 mb-6">
+          Verifica o desverifica canales. Los canales verificados mostrarán un check azul.
+        </p>
 
         {isLoadingChannels ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -120,97 +122,99 @@ export const AdminDashboardView = () => {
               <p className="text-muted-foreground">No hay canales registrados</p>
             </CardContent>
           </Card>
-        ) : (
-          <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              {channels.map((channel) => (
-                <Card key={channel.id}>
-                  <CardHeader>
-                    <div className="flex items-start gap-4">
-                      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted shrink-0">
-                        <Image
-                          src={channel.avatar || channel.userImageUrl || "/placeholder.svg"}
-                          alt={channel.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <CardTitle className="text-lg line-clamp-1">{channel.name}</CardTitle>
-                          {channel.isVerified && (
-                          <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center">
-                            <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
-                          </div>
-                          )}
-                        </div>
-                        {channel.userUsername && (
-                          <CardDescription>@{channel.userUsername}</CardDescription>
-                        )}
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {channel.description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                        {channel.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mb-4">
-                      <Badge variant={channel.isVerified ? "default" : "secondary"}>
-                        {channel.isVerified ? "Verificado" : "No verificado"}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                        className="flex-1"
-                      >
-                        <Link href={`/channel/${channel.userUsername || ""}`}>
-                          Ver Canal
-                        </Link>
-                      </Button>
-                      {channel.isVerified ? (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => unverifyChannel.mutate({ channelId: channel.id })}
-                          disabled={unverifyChannel.isPending}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Desverificar
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="default"
-                          size="sm"
-                          onClick={() => verifyChannel.mutate({ channelId: channel.id })}
-                          disabled={verifyChannel.isPending}
-                        >
-                         {/* Contenido agrupado en un span para prevenir errores de múltiples hijos */}
-                          <span className="flex items-center gap-2"> 
-                            <div className="h-5 w-5 rounded-full bg-blue-600 flex items-center justify-center shrink-0">
-                              <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
-                            </div>
-                            Verificar
-                          </span>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            <InfiniteScroll
-              isManual
-              hasNextPage={hasNextPage}
-              isFetchingNextPage={isFetchingNextPage}
-              fetchNextPage={fetchNextPage}
-            />
-          </>
-        )}
+        ) : (
+          <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              {channels.map((channel) => (
+                <Card key={channel.id}>
+                  <CardHeader>
+                    <div className="flex items-start gap-4">
+                      <div className="relative w-16 h-16 rounded-full overflow-hidden bg-muted shrink-0">
+                        <Image
+                          src={channel.avatar || channel.userImageUrl || "/placeholder.svg"}
+                          alt={channel.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-lg line-clamp-1">{channel.name}</CardTitle>
+                          {channel.isVerified && (
+                          <div className="h-5 w-5 rounded-full bg-[#5ADBFD] flex items-center justify-center">
+                            <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                          </div>
+                          )}
+                        </div>
+                        {channel.userUsername && (
+                          <CardDescription>@{channel.userUsername}</CardDescription>
+                        )}
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {channel.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
+                        {channel.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge variant={channel.isVerified ? "default" : "secondary"}>
+                        {channel.isVerified ? "Verificado" : "No verificado"}
+                      </Badge>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="flex-1 border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]"
+                      >
+                        <Link href={`/channel/${channel.userUsername || ""}`}>
+                          Ver Canal
+                        </Link>
+                      </Button>
+                      {channel.isVerified ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => unverifyChannel.mutate({ channelId: channel.id })}
+                          disabled={unverifyChannel.isPending}
+                          className="border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Desverificar
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => verifyChannel.mutate({ channelId: channel.id })}
+                          disabled={verifyChannel.isPending}
+                          className="bg-[#5ADBFD] text-white hover:bg-[#5ADBFD]/80"
+                        >
+                         {/* Contenido agrupado en un span para prevenir errores de múltiples hijos */}
+                          <span className="flex items-center gap-2"> 
+                            <div className="h-5 w-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                              <Check className="h-3.5 w-3.5 text-white stroke-[3]" />
+                            </div>
+                            Verificar
+                          </span>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            <InfiniteScroll
+              isManual
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              fetchNextPage={fetchNextPage}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

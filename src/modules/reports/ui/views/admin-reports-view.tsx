@@ -1,7 +1,6 @@
 "use client";
 
-import { useTRPC } from "@/trpc/client";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { api } from "@/trpc/client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,6 @@ import { es } from "date-fns/locale";
 import { ReportModerationDialog } from "../components/report-moderation-dialog";
 
 export const AdminReportsView = () => {
-  const trpc = useTRPC();
   const router = useRouter();
 
   // Estados para filtros
@@ -28,9 +26,7 @@ export const AdminReportsView = () => {
   const [userIdFilter, setUserIdFilter] = useState<string>("");
 
   // Verificar si el usuario es admin
-  const { data: isAdmin, isLoading: isLoadingAdmin } = useQuery({
-    ...trpc.users.isAdmin.queryOptions(),
-  });
+  const { data: isAdmin, isLoading: isLoadingAdmin } = api.users.isAdmin.useQuery();
 
   // Si no es admin, redirigir
   useEffect(() => {
@@ -41,10 +37,12 @@ export const AdminReportsView = () => {
   }, [isAdmin, isLoadingAdmin, router]);
 
   // Obtener estadísticas de reportes
-  const { data: stats, isLoading: isLoadingStats } = useQuery({
-    ...trpc.reports.getStats.queryOptions(),
-    enabled: !!isAdmin,
-  });
+  const { data: stats, isLoading: isLoadingStats } = api.reports.getStats.useQuery(
+    undefined,
+    {
+      enabled: !!isAdmin,
+    }
+  );
 
   // Obtener reportes con filtros
   const {
@@ -53,21 +51,16 @@ export const AdminReportsView = () => {
     isFetchingNextPage,
     fetchNextPage,
     isLoading: isLoadingReports,
-    refetch,
-  } = useInfiniteQuery(
-    trpc.reports.getAll.infiniteQueryOptions(
-      {
-        limit: 20,
-        videoId: videoIdFilter || undefined,
-        userId: userIdFilter || undefined,
-      },
-      {
-        getNextPageParam(lastPage) {
-          return lastPage.nextCursor;
-        },
-        enabled: !!isAdmin,
-      }
-    )
+  } = api.reports.getAll.useInfiniteQuery(
+    {
+      limit: 20,
+      videoId: videoIdFilter || undefined,
+      userId: userIdFilter || undefined,
+    },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      enabled: !!isAdmin,
+    }
   );
 
   // Limpiar filtros
@@ -93,7 +86,7 @@ export const AdminReportsView = () => {
   }
 
   if (!isAdmin) {
-    return null; // El useEffect redirigirá
+    return <div></div>; // El useEffect redirigirá, pero necesitamos retornar un elemento válido
   }
 
   const reports = reportsData?.pages.flatMap((page) => page.items) || [];
@@ -101,8 +94,8 @@ export const AdminReportsView = () => {
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">
       <div className="flex items-center gap-3 mb-6">
-        <AlertTriangle className="h-8 w-8 text-orange-500" />
-        <h1 className="text-3xl font-bold">Panel de Reportes</h1>
+        <AlertTriangle className="h-8 w-8 text-[#5ADBFD]" />
+        <h1 className="text-3xl font-bold text-white">Panel de Reportes</h1>
       </div>
 
       {/* Estadísticas */}
@@ -116,35 +109,35 @@ export const AdminReportsView = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-orange-500" />
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                <AlertTriangle className="h-5 w-5 text-[#5ADBFD]" />
                 Total de Reportes
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats?.totalReports || 0}</p>
+              <p className="text-3xl font-bold text-white">{stats?.totalReports || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Video className="h-5 w-5 text-blue-500" />
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                <Video className="h-5 w-5 text-[#5ADBFD]" />
                 Videos Reportados
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats?.uniqueVideoReports || 0}</p>
+              <p className="text-3xl font-bold text-white">{stats?.uniqueVideoReports || 0}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <User className="h-5 w-5 text-green-500" />
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                <User className="h-5 w-5 text-[#5ADBFD]" />
                 Usuarios que Reportaron
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold">{stats?.uniqueUserReports || 0}</p>
+              <p className="text-3xl font-bold text-white">{stats?.uniqueUserReports || 0}</p>
             </CardContent>
           </Card>
         </div>
@@ -153,13 +146,13 @@ export const AdminReportsView = () => {
       {/* Filtros */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Filtros</CardTitle>
-          <CardDescription>Filtra los reportes por video o usuario</CardDescription>
+          <CardTitle className="text-white">Filtros</CardTitle>
+          <CardDescription className="text-white/70">Filtra los reportes por video o usuario</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="videoId">ID del Video</Label>
+              <Label htmlFor="videoId" className="text-white">ID del Video</Label>
               <div className="flex gap-2">
                 <Input
                   id="videoId"
@@ -172,6 +165,7 @@ export const AdminReportsView = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => setVideoIdFilter("")}
+                    className="text-white/70 hover:text-[#5ADBFD] hover:bg-[#5ADBFD]/10"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -179,7 +173,7 @@ export const AdminReportsView = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="userId">ID del Usuario</Label>
+              <Label htmlFor="userId" className="text-white">ID del Usuario</Label>
               <div className="flex gap-2">
                 <Input
                   id="userId"
@@ -192,6 +186,7 @@ export const AdminReportsView = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => setUserIdFilter("")}
+                    className="text-white/70 hover:text-[#5ADBFD] hover:bg-[#5ADBFD]/10"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -201,7 +196,7 @@ export const AdminReportsView = () => {
           </div>
           {hasActiveFilters && (
             <div className="mt-4">
-              <Button variant="outline" onClick={clearFilters}>
+              <Button variant="outline" onClick={clearFilters} className="border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]">
                 <X className="h-4 w-4 mr-2" />
                 Limpiar Filtros
               </Button>
@@ -213,8 +208,8 @@ export const AdminReportsView = () => {
       {/* Lista de reportes */}
       <Card>
         <CardHeader>
-          <CardTitle>Reportes</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-white">Reportes</CardTitle>
+          <CardDescription className="text-white/70">
             Lista de todos los reportes de videos {hasActiveFilters && "(filtrados)"}
           </CardDescription>
         </CardHeader>
@@ -235,21 +230,21 @@ export const AdminReportsView = () => {
               </p>
             </div>
           ) : (
-            <>
+            <div>
               <div className="space-y-4">
                 {reports.map((report) => {
                   const getStatusBadge = (status: string) => {
                     switch (status) {
                       case "pending":
-                        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">Pendiente</Badge>;
+                        return <Badge variant="outline" className="bg-yellow-500/20 text-yellow-300 border-yellow-500/50">Pendiente</Badge>;
                       case "valid":
-                        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Válido</Badge>;
+                        return <Badge variant="outline" className="bg-green-500/20 text-green-300 border-green-500/50">Válido</Badge>;
                       case "invalid":
-                        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">Inválido</Badge>;
+                        return <Badge variant="outline" className="bg-red-500/20 text-red-300 border-red-500/50">Inválido</Badge>;
                       case "resolved":
-                        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">Resuelto</Badge>;
+                        return <Badge variant="outline" className="bg-[#5ADBFD]/20 text-[#5ADBFD] border-[#5ADBFD]/50">Resuelto</Badge>;
                       default:
-                        return <Badge variant="outline">{status}</Badge>;
+                        return <Badge variant="outline" className="border-white/20 text-white/70">{status}</Badge>;
                     }
                   };
 
@@ -275,7 +270,7 @@ export const AdminReportsView = () => {
                           <div className="flex items-center gap-2">
                             {getStatusBadge(report.status || "pending")}
                             {report.adminAction && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs border-white/20 text-white/70 bg-white/5">
                                 {report.adminAction.replace(/_/g, " ")}
                               </Badge>
                             )}
@@ -299,15 +294,15 @@ export const AdminReportsView = () => {
                               )}
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <Video className="h-4 w-4 text-blue-500 shrink-0" />
+                                  <Video className="h-4 w-4 text-[#5ADBFD] shrink-0" />
                                   <Link
                                     href={`/video/${report.video.id}`}
-                                    className="font-semibold hover:underline line-clamp-1"
+                                    className="font-semibold hover:underline line-clamp-1 text-white hover:text-[#5ADBFD]"
                                   >
                                     {report.video.title || "Sin título"}
                                   </Link>
                                 </div>
-                                <p className="text-sm text-muted-foreground mb-1">
+                                <p className="text-sm text-white/70 mb-1">
                                   Video ID: {report.videoId}
                                 </p>
                               </div>
@@ -329,17 +324,17 @@ export const AdminReportsView = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-2">
-                                  <User className="h-4 w-4 text-green-500 shrink-0" />
-                                  <span className="font-semibold">
+                                  <User className="h-4 w-4 text-[#5ADBFD] shrink-0" />
+                                  <span className="font-semibold text-white">
                                     {report.user.name || "Usuario desconocido"}
                                   </span>
                                 </div>
                                 {report.user.username && (
-                                  <p className="text-sm text-muted-foreground mb-1">
+                                  <p className="text-sm text-white/70 mb-1">
                                     @{report.user.username}
                                   </p>
                                 )}
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-sm text-white/70">
                                   Usuario ID: {report.userId}
                                 </p>
                               </div>
@@ -350,14 +345,14 @@ export const AdminReportsView = () => {
                         {/* Razón del reporte */}
                         <div className="flex-1">
                           <div className="flex items-start gap-2 mb-2">
-                            <AlertTriangle className="h-4 w-4 text-orange-500 shrink-0 mt-1" />
+                            <AlertTriangle className="h-4 w-4 text-[#5ADBFD] shrink-0 mt-1" />
                             <div className="flex-1">
-                              <Label className="text-sm font-semibold mb-1 block">Razón del Reporte</Label>
-                              <p className="text-sm whitespace-pre-wrap break-words">{report.reason}</p>
+                              <Label className="text-sm font-semibold mb-1 block text-white">Razón del Reporte</Label>
+                              <p className="text-sm whitespace-pre-wrap break-words text-white/90">{report.reason}</p>
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-2 text-xs text-white/70">
                               <Calendar className="h-3 w-3" />
                               <span>
                                 Creado {formatDistanceToNow(new Date(report.createdAt), {
@@ -367,7 +362,7 @@ export const AdminReportsView = () => {
                               </span>
                             </div>
                             {report.reviewedAt && (
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-2 text-xs text-white/70">
                                 <ShieldCheckIcon className="h-3 w-3" />
                                 <span>
                                   Revisado {formatDistanceToNow(new Date(report.reviewedAt), {
@@ -379,7 +374,7 @@ export const AdminReportsView = () => {
                               </div>
                             )}
                             {report.adminNotes && (
-                              <div className="mt-2 p-2 bg-muted rounded text-xs">
+                              <div className="mt-2 p-2 bg-white/5 backdrop-blur-sm border border-white/20 rounded text-xs text-white/90">
                                 <strong>Notas del admin:</strong> {report.adminNotes}
                               </div>
                             )}
@@ -397,7 +392,7 @@ export const AdminReportsView = () => {
                 isFetchingNextPage={isFetchingNextPage}
                 fetchNextPage={fetchNextPage}
               />
-            </>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -51,9 +51,9 @@ export const MainSection = () => {
                   }
                 }}
               >
-                <Link href={item.url} className="flex items-center gap-4" prefetch>
-                  <item.icon />
-                  <span className="text-sm">{item.title}</span>
+                <Link href={item.url} className="flex items-center gap-4 text-white" prefetch>
+                  <item.icon className="text-white" />
+                  <span className="text-sm text-white">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -135,7 +135,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
   };
 
   const defaultTrigger = (
-    <Button variant="outline" size="sm" className="gap-2">
+    <Button variant="outline" size="sm" className="gap-2 border-[#5ADBFD]/30 text-white hover:bg-[#5ADBFD]/10 hover:text-[#5ADBFD]">
       <ShieldCheckIcon className="h-4 w-4" />
       Moderar
     </Button>
@@ -148,11 +148,11 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldCheckIcon className="h-5 w-5 text-blue-500" />
+          <DialogTitle className="flex items-center gap-2 text-white">
+            <ShieldCheckIcon className="h-5 w-5 text-[#5ADBFD]" />
             Moderar Reporte
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-white/70">
             Revisa el reporte y toma las acciones apropiadas sobre el contenido y usuarios involucrados.
           </DialogDescription>
         </DialogHeader>
@@ -160,13 +160,13 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
           <div className="space-y-6 py-4">
             {/* Información del reporte */}
             <div className="space-y-2">
-              <Label>Razón del reporte</Label>
-              <div className="p-3 bg-muted rounded-md text-sm">{report.reason}</div>
+              <Label className="text-white">Razón del reporte</Label>
+              <div className="p-3 bg-white/5 backdrop-blur-sm border border-white/20 rounded-md text-sm text-white">{report.reason}</div>
             </div>
 
             {/* Estado del reporte */}
             <div className="space-y-2">
-              <Label htmlFor="status">Estado del reporte *</Label>
+              <Label htmlFor="status" className="text-white">Estado del reporte *</Label>
               <Select
                 value={status}
                 onValueChange={(value) => setStatus(value as "valid" | "invalid" | "resolved")}
@@ -177,19 +177,19 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                 <SelectContent>
                   <SelectItem value="valid">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="h-4 w-4 text-green-400" />
                       Válido - El contenido infringe las normas
                     </div>
                   </SelectItem>
                   <SelectItem value="invalid">
                     <div className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="h-4 w-4 text-red-400" />
                       Inválido - Reporte infundado
                     </div>
                   </SelectItem>
                   <SelectItem value="resolved">
                     <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-blue-500" />
+                      <CheckCircle2 className="h-4 w-4 text-[#5ADBFD]" />
                       Resuelto - Ya se tomó acción
                     </div>
                   </SelectItem>
@@ -200,7 +200,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
             {/* Acciones sobre el video (solo si el reporte es válido) */}
             {status === "valid" && (
               <div className="space-y-2">
-                <Label htmlFor="videoAction">Acción sobre el video</Label>
+                <Label htmlFor="videoAction" className="text-white">Acción sobre el video</Label>
                 <Select
                   value={videoAction}
                   onValueChange={(value) =>
@@ -218,8 +218,8 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                   </SelectContent>
                 </Select>
                 {report.video && (
-                  <p className="text-xs text-muted-foreground">
-                    Estado actual: <Badge variant="outline">{report.video.visibility}</Badge>
+                  <p className="text-xs text-white/70">
+                    Estado actual: <Badge variant="outline" className="border-white/20 text-white/70">{report.video.visibility}</Badge>
                   </p>
                 )}
               </div>
@@ -228,7 +228,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
             {/* Acciones sobre el usuario denunciado (solo si el reporte es válido) */}
             {status === "valid" && (
               <div className="space-y-2">
-                <Label htmlFor="userAction">Acción sobre el usuario denunciado</Label>
+                <Label htmlFor="userAction" className="text-white">Acción sobre el usuario denunciado</Label>
                 <Select
                   value={userAction}
                   onValueChange={(value) => setUserAction(value as "warning" | "suspension" | "ban" | "none")}
@@ -246,7 +246,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
 
                 {userAction !== "none" && (
                   <div className="space-y-2 mt-2">
-                    <Label htmlFor="userActionReason">Razón de la acción *</Label>
+                    <Label htmlFor="userActionReason" className="text-white">Razón de la acción *</Label>
                     <Textarea
                       id="userActionReason"
                       value={userActionReason}
@@ -257,7 +257,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                     />
                     {userAction === "suspension" && (
                       <div className="space-y-2">
-                        <Label htmlFor="suspensionDays">Duración (días)</Label>
+                        <Label htmlFor="suspensionDays" className="text-white">Duración (días)</Label>
                         <Input
                           id="suspensionDays"
                           type="number"
@@ -284,11 +284,11 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                     onChange={(e) => setPenalizeReporter(e.target.checked)}
                     className="rounded"
                   />
-                  <Label htmlFor="penalizeReporter" className="cursor-pointer">
+                  <Label htmlFor="penalizeReporter" className="cursor-pointer text-white">
                     Penalizar al reportero (reporte abusivo o spam)
                   </Label>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/70">
                   Se registrará una advertencia para el usuario que reportó
                 </p>
               </div>
@@ -296,7 +296,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
 
             {/* Notas del admin */}
             <div className="space-y-2">
-              <Label htmlFor="adminNotes">Notas internas (opcional)</Label>
+              <Label htmlFor="adminNotes" className="text-white">Notas internas (opcional)</Label>
               <Textarea
                 id="adminNotes"
                 value={adminNotes}
@@ -305,7 +305,7 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                 className="min-h-[100px]"
                 maxLength={1000}
               />
-              <p className="text-xs text-muted-foreground">{adminNotes.length}/1000</p>
+              <p className="text-xs text-white/70">{adminNotes.length}/1000</p>
             </div>
           </div>
           <DialogFooter>
@@ -316,10 +316,11 @@ export const ReportModerationDialog = ({ report, trigger }: ReportModerationDial
                 setOpen(false);
               }}
               disabled={reviewReport.isPending}
+              className="border-white/20 text-white hover:bg-white/10 hover:text-[#5ADBFD]"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={reviewReport.isPending}>
+            <Button type="submit" disabled={reviewReport.isPending} className="bg-[#5ADBFD] text-white hover:bg-[#5ADBFD]/80">
               {reviewReport.isPending ? "Procesando..." : "Aplicar Acciones"}
             </Button>
           </DialogFooter>

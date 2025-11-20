@@ -23,8 +23,8 @@ export const ChannelContent = ({ username, channelId }: ChannelContentProps) => 
     return (
       <div className="px-8 pb-8">
         <div className="w-full">
-          <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
-            <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium">
+          <div className="inline-flex h-10 items-center justify-center rounded-md bg-transparent border border-white/20 p-1 text-white/70">
+            <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-white/70">
               <VideoIcon className="h-4 w-4 mr-2" />
               Videos
             </div>

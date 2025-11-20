@@ -118,7 +118,7 @@ export const VideoCard = ({
 
         <div className="flex-1 min-w-0">
           <Link href={`/video/${id}`} className="group">
-            <h3 className="font-semibold line-clamp-2 group-hover:text-blue-600 transition-colors">
+            <h3 className="font-semibold line-clamp-2 text-white group-hover:text-[#5ADBFD] transition-colors">
               {title}
             </h3>
           </Link>

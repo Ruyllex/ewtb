@@ -4,7 +4,7 @@ import "server-only"; // <-- ensure this file cannot be imported from the client
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { createTRPCClient, httpLink } from "@trpc/client";
 import { createTRPCOptionsProxy, TRPCQueryOptions } from "@trpc/tanstack-react-query";
-import { cache } from "react";
+import React, { cache } from "react";
 import { createTRPCContext } from "./init";
 import { makeQueryClient } from "./query-client";
 import { appRouter } from "./routers/_app";
@@ -28,13 +28,11 @@ export function HydrateClient(props: { children: React.ReactNode }) {
   const queryClient = getQueryClient();
   const dehydratedState = dehydrate(queryClient);
   
-  // Envolver children en un div para asegurar un único elemento hijo
-  // Esto resuelve el problema con HydrationBoundary que espera un único elemento
+  // HydrationBoundary espera un único elemento hijo directo
+  // AdminDashboardView y otros componentes hijos deben retornar un único elemento
   return (
     <HydrationBoundary state={dehydratedState}>
-      <div style={{ display: 'contents' }}>
-        {props.children}
-      </div>
+      {props.children}
     </HydrationBoundary>
   );
 }

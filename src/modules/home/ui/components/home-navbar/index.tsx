@@ -7,7 +7,7 @@ import { SearchInput } from "./search-input";
 
 export const HomeNavbar = () => {
   return (
-    <nav className=" fixed top-0 left-0 right-0 h-16 bg-white flex items-center px-2 pr-5 z-50">
+    <nav className=" fixed top-0 left-0 right-0 h-16 bg-transparent backdrop-blur-sm flex items-center px-2 pr-5 z-50">
       <div className="flex items-center gap-4 w-full">
         {/* Menu and Logo */}
         <div className="flex items-center shrink-0">
@@ -16,7 +16,7 @@ export const HomeNavbar = () => {
           <Link href={"/"}>
             <div className="flex items-center gap-1 p-4">
               <Image src={"/logo.svg"} alt={"Logo"} width={32} height={16} priority />
-              <p className="text-xl font-semibold tracking-tight">NewTube</p>
+              <p className="text-xl font-semibold tracking-tight text-white">FacuGo! Plus</p>
             </div>
           </Link>
         </div>

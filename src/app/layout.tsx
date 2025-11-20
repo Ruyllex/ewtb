@@ -13,9 +13,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "NewTube | Your favorite videos, right here",
+  title: "FacuGo! Plus | Your favorite videos, right here",
   description:
-    "NewTube is a video sharing platform that allows you to share your favorite videos with your friends and family.",
+    "FacuGo! Plus is a video sharing platform that allows you to share your favorite videos with your friends and family.",
   icons: {
     icon: "/logo.svg",
   },
