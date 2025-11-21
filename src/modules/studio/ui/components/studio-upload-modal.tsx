@@ -4,7 +4,7 @@ import { ResponsiveModal } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2Icon, PlusIcon, XIcon } from "lucide-react";
+import { Loader2Icon, PlusIcon, UploadIcon } from "lucide-react";
 import { toast } from "sonner";
 import { StudioUploader } from "./studio-uploader";
 import { VideoPreviewForm } from "./video-preview-form";
@@ -41,23 +41,34 @@ export const StudioUploadModal = () => {
     create.reset();
   };
 
-  const handleFinalize = () => {
-    queryClient.invalidateQueries({ refetchType: "active" });
-    handleCancel();
+  const isOpen = step !== "idle";
+
+  const getModalTitle = () => {
+    switch (step) {
+      case "uploading":
+        return "Subir Video";
+      case "preview":
+        return "Configurar Video";
+      default:
+        return "Subir Video";
+    }
   };
 
-  const isOpen = step !== "idle";
+  const getModalDescription = () => {
+    switch (step) {
+      case "uploading":
+        return "Selecciona el archivo de video que deseas subir a la plataforma";
+      case "preview":
+        return "Completa la información de tu video y configúralo antes de publicarlo";
+      default:
+        return "";
+    }
+  };
 
   return (
     <>
       <ResponsiveModal
-        title={
-          step === "uploading"
-            ? "Subir video"
-            : step === "preview"
-              ? "Previsualizar y configurar video"
-              : "Subir video"
-        }
+        title={getModalTitle()}
         open={isOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -65,35 +76,47 @@ export const StudioUploadModal = () => {
           }
         }}
       >
-        {step === "uploading" && (
-          <div className="space-y-4">
-            <StudioUploader
-              endpoint={uploadUrl}
-              uploadId={uploadId}
-              onUploadComplete={handleUploadComplete}
-              onFileSelect={(file) => create.mutate({ contentType: file.type || "video/mp4" })}
-            />
-          </div>
-        )}
+        <div className="space-y-6">
+          {step === "uploading" && (
+            <div className="space-y-4">
+              <div className="text-center space-y-2 pb-4">
+                <p className="text-sm text-muted-foreground">{getModalDescription()}</p>
+              </div>
+              <StudioUploader
+                endpoint={uploadUrl}
+                uploadId={uploadId}
+                onUploadComplete={handleUploadComplete}
+                onFileSelect={(file) => create.mutate({ contentType: file.type || "video/mp4" })}
+              />
+            </div>
+          )}
 
-        {step === "preview" && uploadId && (
-          <VideoPreviewForm uploadId={uploadId} onCancel={handleCancel} />
-        )}
+          {step === "preview" && uploadId && (
+            <div className="max-h-[80vh] overflow-y-auto">
+              <VideoPreviewForm uploadId={uploadId} onCancel={handleCancel} />
+            </div>
+          )}
 
-        {step === "idle" && create.isPending && (
-          <div className="flex items-center justify-center py-12">
-            <Loader2Icon className="animate-spin size-8" />
-          </div>
-        )}
+          {step === "idle" && create.isPending && (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <Loader2Icon className="animate-spin size-8 text-primary" />
+              <p className="text-sm text-muted-foreground">Preparando subida...</p>
+            </div>
+          )}
+        </div>
       </ResponsiveModal>
 
       <Button
         variant={"secondary"}
         onClick={() => setStep("uploading")}
-        className="cursor-pointer"
+        className="cursor-pointer gap-2"
         disabled={create.isPending || isOpen}
       >
-        {create.isPending ? <Loader2Icon className="animate-spin" /> : <PlusIcon />}
+        {create.isPending ? (
+          <Loader2Icon className="animate-spin size-4" />
+        ) : (
+          <PlusIcon className="size-4" />
+        )}
         Subir Video
       </Button>
     </>

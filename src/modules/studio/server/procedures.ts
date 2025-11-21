@@ -15,6 +15,7 @@ const studioVideoSelect = {
   s3Url: videos.s3Url,
   thumbnailUrl: videos.thumbnailUrl,
   thumbnailKey: videos.thumbnailKey,
+  thumbnailImage: videos.thumbnailImage, // Para verificar si hay imagen en BD
   previewUrl: videos.previewUrl,
   previewKey: videos.previewKey,
   duration: videos.duration,
@@ -24,6 +25,7 @@ const studioVideoSelect = {
   createdAt: videos.createdAt,
   updatedAt: videos.updatedAt,
 };
+
 
 async function fetchCountsForVideos(videoIds: string[]) {
   const viewCounts = new Map<string, number>();
@@ -92,12 +94,27 @@ export const studioRouter = createTRPCRouter({
 
       // Generar URL firmada si hay s3Key
       const signedS3Url = video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url;
-      const signedThumbnailUrl = video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl;
+      
+      // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
+      let finalThumbnailUrl: string | null = null;
+      if (video.thumbnailImage) {
+        // Si hay imagen en BD, usar la ruta API
+        finalThumbnailUrl = `/api/videos/${video.id}/thumbnail`;
+      } else if (video.thumbnailKey) {
+        // Si hay thumbnailKey, generar URL firmada
+        finalThumbnailUrl = await getSignedDownloadUrl(video.thumbnailKey);
+      } else {
+        // Fallback a thumbnailUrl
+        finalThumbnailUrl = video.thumbnailUrl;
+      }
+
+      // Eliminar thumbnailImage del objeto retornado (no debe exponerse)
+      const { thumbnailImage, ...videoWithoutThumbnailImage } = video;
 
       return {
-        ...video,
+        ...videoWithoutThumbnailImage,
         s3Url: signedS3Url,
-        thumbnailUrl: signedThumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
         viewCount: viewCounts.get(video.id) ?? 0,
         likeCount: likeCounts.get(video.id) ?? 0,
         commentCount: commentCounts.get(video.id) ?? 0,
@@ -149,14 +166,29 @@ export const studioRouter = createTRPCRouter({
         const items = hasMore ? data.slice(0, -1) : data;
 
         const { viewCounts, likeCounts, commentCounts } = await fetchCountsForVideos(items.map((v) => v.id));
-        const enrichedItems = await Promise.all(items.map(async (video) => ({
-          ...video,
-          s3Url: video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url,
-          thumbnailUrl: video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl,
-          viewCount: viewCounts.get(video.id) ?? 0,
-          likeCount: likeCounts.get(video.id) ?? 0,
-          commentCount: commentCounts.get(video.id) ?? 0,
-        })));
+        const enrichedItems = await Promise.all(items.map(async (video) => {
+          // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
+          let finalThumbnailUrl: string | null = null;
+          if (video.thumbnailImage) {
+            finalThumbnailUrl = `/api/videos/${video.id}/thumbnail`;
+          } else if (video.thumbnailKey) {
+            finalThumbnailUrl = await getSignedDownloadUrl(video.thumbnailKey);
+          } else {
+            finalThumbnailUrl = video.thumbnailUrl;
+          }
+
+          // Eliminar thumbnailImage del objeto retornado
+          const { thumbnailImage, ...videoWithoutThumbnailImage } = video;
+
+          return {
+            ...videoWithoutThumbnailImage,
+            s3Url: video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url,
+            thumbnailUrl: finalThumbnailUrl,
+            viewCount: viewCounts.get(video.id) ?? 0,
+            likeCount: likeCounts.get(video.id) ?? 0,
+            commentCount: commentCounts.get(video.id) ?? 0,
+          };
+        }));
 
         // Set the next cursor
         const lastItem = items[items.length - 1];

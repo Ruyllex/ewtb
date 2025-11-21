@@ -48,6 +48,7 @@ export const ourFileRouter = {
           .set({
             thumbnailUrl: null,
             thumbnailKey: null,
+            thumbnailImage: null, // Limpiar también la imagen almacenada en BD
           })
           .where(and(eq(videos.id, input.videoId), eq(videos.userId, user.id)));
       }
@@ -64,11 +65,28 @@ export const ourFileRouter = {
           throw new UploadThingError("File URL not available");
         }
 
+        // Descargar la imagen y convertirla a bytes para guardarla en la BD
+        let thumbnailImage: Buffer | null = null;
+        try {
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch thumbnail image: ${response.statusText}`);
+          }
+          const arrayBuffer = await response.arrayBuffer();
+          thumbnailImage = Buffer.from(arrayBuffer);
+        } catch (fetchError) {
+          console.error("Error downloading thumbnail image:", fetchError);
+          // Continuamos sin la imagen en bytes, pero guardamos la URL
+        }
+
+        // Guardar en la base de datos: preferentemente en thumbnail_image, 
+        // pero también mantener thumbnailUrl y thumbnailKey para compatibilidad
         await db
           .update(videos)
           .set({
-            thumbnailUrl: fileUrl,
-            thumbnailKey: file.key,
+            thumbnailImage: thumbnailImage,
+            thumbnailUrl: fileUrl, // Mantenemos para compatibilidad
+            thumbnailKey: file.key, // Mantenemos para compatibilidad
           })
           .where(and(eq(videos.id, metadata.videoId), eq(videos.userId, metadata.user.id)));
 

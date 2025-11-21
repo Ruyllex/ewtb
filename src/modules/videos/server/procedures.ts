@@ -325,6 +325,7 @@ export const videosRouter = createTRPCRouter({
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
           thumbnailKey: videos.thumbnailKey,
+          thumbnailImage: videos.thumbnailImage, // Para verificar si hay imagen en BD
           previewUrl: videos.previewUrl,
           s3Url: videos.s3Url,
           s3Key: videos.s3Key,
@@ -352,16 +353,31 @@ export const videosRouter = createTRPCRouter({
       const items = hasMore ? results.slice(0, -1) : results;
 
       // Normalizar y construir objeto channel en cada item
-      const normalized = await Promise.all(items.map(async (item) => ({
-        ...item,
-        s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
-        thumbnailUrl: item.thumbnailKey ? await getSignedDownloadUrl(item.thumbnailKey) : item.thumbnailUrl,
-        channel: {
-          username: item.userUsername ?? null, // username del owner (guardado en users.username)
-          name: item.channelName ?? null,
-          avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
-        },
-      })));
+      const normalized = await Promise.all(items.map(async (item) => {
+        // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
+        let finalThumbnailUrl: string | null = null;
+        if (item.thumbnailImage) {
+          finalThumbnailUrl = `/api/videos/${item.id}/thumbnail`;
+        } else if (item.thumbnailKey) {
+          finalThumbnailUrl = await getSignedDownloadUrl(item.thumbnailKey);
+        } else {
+          finalThumbnailUrl = item.thumbnailUrl;
+        }
+
+        // Eliminar thumbnailImage del objeto retornado (no debe exponerse)
+        const { thumbnailImage, ...itemWithoutThumbnailImage } = item;
+
+        return {
+          ...itemWithoutThumbnailImage,
+          s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
+          thumbnailUrl: finalThumbnailUrl,
+          channel: {
+            username: item.userUsername ?? null, // username del owner (guardado en users.username)
+            name: item.channelName ?? null,
+            avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
+          },
+        };
+      }));
 
       const lastItem = items[items.length - 1];
       const nextCursor = hasMore && lastItem
@@ -384,6 +400,7 @@ export const videosRouter = createTRPCRouter({
           description: videos.description,
           thumbnailUrl: videos.thumbnailUrl,
           thumbnailKey: videos.thumbnailKey,
+          thumbnailImage: videos.thumbnailImage, // Para verificar si hay imagen en BD
           s3Url: videos.s3Url,
           s3Key: videos.s3Key,
           duration: videos.duration,
@@ -429,12 +446,24 @@ export const videosRouter = createTRPCRouter({
 
       // Generar URL firmada si hay s3Key
       const signedS3Url = video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url;
-      const signedThumbnailUrl = video.thumbnailKey ? await getSignedDownloadUrl(video.thumbnailKey) : video.thumbnailUrl;
+      
+      // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
+      let finalThumbnailUrl: string | null = null;
+      if (video.thumbnailImage) {
+        finalThumbnailUrl = `/api/videos/${video.id}/thumbnail`;
+      } else if (video.thumbnailKey) {
+        finalThumbnailUrl = await getSignedDownloadUrl(video.thumbnailKey);
+      } else {
+        finalThumbnailUrl = video.thumbnailUrl;
+      }
+
+      // Eliminar thumbnailImage del objeto retornado (no debe exponerse)
+      const { thumbnailImage, ...videoWithoutThumbnailImage } = video;
 
       return {
-        ...video,
+        ...videoWithoutThumbnailImage,
         s3Url: signedS3Url,
-        thumbnailUrl: signedThumbnailUrl,
+        thumbnailUrl: finalThumbnailUrl,
         viewCount,
         channel: {
           username: video.userUsername ?? null,

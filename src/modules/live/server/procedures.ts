@@ -82,11 +82,44 @@ export const liveRouter = createTRPCRouter({
         // Manejar errores específicos de AWS IVS
         const status = error?.$metadata?.httpStatusCode;
         const errorMessage = error?.message || "Unknown error";
+        const errorCode = error?.name || error?.code;
+        const requestId = error?.$metadata?.requestId;
 
-        if (status === 401 || status === 403) {
+        // Detectar errores específicos de autenticación/autorización
+        if (status === 401 || status === 403 || errorCode === "UnrecognizedClientException" || errorCode === "InvalidSignatureException" || errorCode === "AccessDeniedException") {
+          let detailedMessage = "Credenciales de AWS inválidas o sin permisos para IVS.\n\n";
+          
+          // Verificar si las credenciales están presentes
+          const hasAccessKey = !!process.env.AWS_ACCESS_KEY_ID;
+          const hasSecretKey = !!process.env.AWS_SECRET_ACCESS_KEY;
+          const region = process.env.AWS_REGION || "us-east-1";
+          
+          if (!hasAccessKey || !hasSecretKey) {
+            detailedMessage += "❌ Las credenciales no están configuradas en las variables de entorno.\n";
+            detailedMessage += "   Asegúrate de tener AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY en tu .env.local\n\n";
+          } else {
+            detailedMessage += "✅ Las credenciales están configuradas, pero pueden ser incorrectas o no tener permisos.\n\n";
+          }
+          
+          detailedMessage += "Pasos para resolver:\n";
+          detailedMessage += "1. Verifica que tus credenciales AWS sean correctas en .env.local\n";
+          detailedMessage += "2. Asegúrate de que el usuario IAM tenga estos permisos:\n";
+          detailedMessage += "   - ivs:CreateChannel\n";
+          detailedMessage += "   - ivs:DeleteChannel\n";
+          detailedMessage += "   - ivs:GetChannel\n";
+          detailedMessage += "   - ivs:ListChannels\n";
+          detailedMessage += "   - ivs:GetStreamKey\n";
+          detailedMessage += "3. Verifica que AWS IVS esté habilitado en tu cuenta AWS\n";
+          detailedMessage += `4. Asegúrate de que la región "${region}" sea compatible con IVS\n\n`;
+          detailedMessage += "Regiones compatibles con IVS: us-east-1, us-west-2, eu-west-1, ap-southeast-1, ap-northeast-1";
+
+          if (requestId) {
+            detailedMessage += `\n\nRequest ID: ${requestId}`;
+          }
+
           throw new TRPCError({
             code: "UNAUTHORIZED",
-            message: "Invalid AWS credentials. Please verify your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY are correct and have IVS permissions.",
+            message: detailedMessage,
           });
         }
 

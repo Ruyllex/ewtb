@@ -41,3 +41,4 @@ ALTER TABLE live_streams DROP COLUMN IF EXISTS mux_playback_id;
 -- WHERE table_name = 'live_streams' 
 -- AND column_name LIKE 'mux_%';
 
+
