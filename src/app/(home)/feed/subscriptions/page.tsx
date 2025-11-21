@@ -16,3 +16,4 @@ const SubscriptionsPage = async () => {
 };
 
 export default SubscriptionsPage;
+

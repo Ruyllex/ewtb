@@ -16,6 +16,7 @@ import { HeartIcon, CrownIcon, Bell, BellOff, CheckCircle2, Sparkles } from "luc
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { CommentsSection } from "@/modules/comments/ui/components/comments-section";
+import { VideoCard } from "../components/video-card";
 
 interface VideoViewProps {
   videoId: string;
@@ -88,6 +89,20 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
       toast.error(error.message || "Error al suscribirse");
     },
   });
+
+  // Fetch related videos from the same category
+  const { data: relatedVideosData } = trpc.videos.getMany.useQuery(
+    {
+      categoryId: video?.categoryId ?? undefined,
+      limit: 10,
+    },
+    {
+      enabled: !!video?.categoryId,
+    }
+  );
+
+  // Filter out the current video from related videos  
+  const relatedVideos = relatedVideosData?.items.filter(v => v.id !== videoId) ?? [];
 
   // Si está cargando, mostrar skeleton
   if (isLoading) {
@@ -215,11 +230,34 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
             </div>
           </section>
 
-          {/* Sidebar - Related videos (placeholder) */}
+          {/* Sidebar - Related videos */}
           <aside className="space-y-4 lg:sticky lg:top-24">
             <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-sm p-4">
-              <h2 className="text-lg font-semibold text-white">Videos relacionados</h2>
-              <p className="mt-2 text-sm text-white/70">Related videos coming soon...</p>
+              <h2 className="text-lg font-semibold text-white mb-4">Videos relacionados</h2>
+              {relatedVideos.length > 0 ? (
+                <div className="space-y-4">
+                  {relatedVideos.map((relatedVideo) => (
+                    <VideoCard
+                      key={relatedVideo.id}
+                      id={relatedVideo.id}
+                      title={relatedVideo.title}
+                      thumbnailUrl={relatedVideo.thumbnailUrl}
+                      duration={relatedVideo.duration}
+                      createdAt={relatedVideo.createdAt}
+                      viewCount={relatedVideo.viewCount || 0}
+                      likes={relatedVideo.likes || 0}
+                      channel={relatedVideo.channel}
+                      userName={relatedVideo.userName}
+                      userUsername={relatedVideo.userUsername}
+                      userImageUrl={relatedVideo.userImageUrl}
+                    />
+                  ))}
+                </div>
+              ) : video?.categoryId ? (
+                <p className="text-sm text-white/70">No hay más videos de esta categoría disponibles.</p>
+              ) : (
+                <p className="text-sm text-white/70">Este video no tiene categoría asignada.</p>
+              )}
             </div>
           </aside>
         </div>
