@@ -92,6 +92,7 @@ export const SubscriptionsView = () => {
                                 description={video.description}
                                 thumbnailUrl={video.thumbnailUrl}
                                 previewUrl={video.previewUrl}
+                                videoUrl={video.s3Url}
                                 duration={video.duration}
                                 createdAt={video.createdAt}
                                 likes={video.likes}

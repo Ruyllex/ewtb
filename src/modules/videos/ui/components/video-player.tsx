@@ -9,6 +9,7 @@ interface VideoPlayerProps {
   thumbnailUrl?: string | null | undefined;
   autoPlay?: boolean;
   onPlay?: () => void;
+  onLoadedMetadata?: (duration: number) => void;
   streamType?: "on-demand" | "live" | "ll-live"; // Tipo de stream: VOD o en vivo
 }
 
@@ -45,6 +46,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   thumbnailUrl,
   autoPlay,
   onPlay,
+  onLoadedMetadata,
   streamType = "on-demand", // Por defecto es VOD
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -142,7 +144,14 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
           controls
           className={styles.player}
           autoPlay={autoPlay}
+          preload="metadata"
           onPlay={onPlay}
+          onLoadedMetadata={(e) => {
+            const duration = e.currentTarget.duration;
+            if (duration && !isNaN(duration) && duration !== Infinity) {
+              onLoadedMetadata?.(Math.floor(duration * 1000));
+            }
+          }}
           onError={(error) => {
             console.warn("Video player error:", error);
           }}

@@ -242,6 +242,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                       id={relatedVideo.id}
                       title={relatedVideo.title}
                       thumbnailUrl={relatedVideo.thumbnailUrl}
+                      videoUrl={relatedVideo.s3Url}
                       duration={relatedVideo.duration}
                       createdAt={relatedVideo.createdAt}
                       viewCount={relatedVideo.viewCount || 0}

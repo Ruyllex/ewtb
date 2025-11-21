@@ -133,6 +133,7 @@ const VideosGridSectionContent = ({ categoryId }: VideosGridSectionProps) => {
               description={video.description}
               thumbnailUrl={video.thumbnailUrl}
               previewUrl={video.previewUrl}
+              videoUrl={video.s3Url}
               duration={video.duration || 0}
               createdAt={video.createdAt}
               // ✅ Pasamos SOLO la prop 'channel'

@@ -21,6 +21,7 @@ interface VideoCardProps {
   description?: string | null;
   thumbnailUrl?: string | null;
   previewUrl?: string | null;
+  videoUrl?: string | null;
   duration: number;
   createdAt: Date;
   likes?: number;
@@ -64,6 +65,7 @@ export const VideoCard = ({
   title,
   thumbnailUrl,
   previewUrl,
+  videoUrl,
   duration,
   createdAt,
   likes = 0,
@@ -97,6 +99,7 @@ export const VideoCard = ({
           <VideoThumbnail
             imageUrl={thumbnailUrl ?? undefined}
             previewUrl={previewUrl ?? undefined}
+            videoUrl={videoUrl ?? undefined}
             title={title}
             duration={duration}
           />

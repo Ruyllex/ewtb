@@ -95,6 +95,7 @@ export const ChannelVideos = ({ username }: ChannelVideosProps) => {
               title={video.title}
               thumbnailUrl={video.thumbnailUrl}
               previewUrl={video.previewUrl}
+              videoUrl={video.s3Url}
               duration={video.duration}
               createdAt={video.createdAt}
               channel={channelProp}

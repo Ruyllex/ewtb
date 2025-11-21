@@ -51,6 +51,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [thumbnailModalOpen, setThumbnailModalOpen] = useState(false);
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState(duration);
 
   const { data: categories } = api.categories.getMany.useQuery();
   const { data: uploadStatus, isLoading: isLoadingStatus } = api.videos.getUploadStatus.useQuery({
@@ -102,7 +103,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
       description: description.trim() || undefined,
       categoryId: categoryId || undefined,
       visibility,
-      duration,
+      duration: videoDuration,
     });
   };
 
@@ -195,6 +196,12 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
                     playbackId={uploadStatus.playbackId || undefined}
                     thumbnailUrl={uploadStatus.thumbnailUrl || undefined}
                     autoPlay={false}
+                    onLoadedMetadata={(d) => {
+                      // Si la duración inicial era 0, actualizarla con la del player
+                      if (videoDuration === 0 && d > 0) {
+                        setVideoDuration(d);
+                      }
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-center gap-2 text-green-600 font-medium py-2">
