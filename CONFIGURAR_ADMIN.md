@@ -46,7 +46,7 @@ npm run dev
 
 ---
 
-## ✅ Verificación
+## ✅ Verificación.
 
 Una vez configurado, el usuario `carlamorrison1947@gmail.com` podrá:
 

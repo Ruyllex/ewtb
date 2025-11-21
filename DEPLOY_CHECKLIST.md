@@ -20,9 +20,7 @@ Este checklist te ayudará a asegurar que todo esté listo antes de hacer el dep
 - [ ] `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` - Clave pública de Clerk (producción)
 - [ ] `CLERK_SECRET_KEY` - Clave secreta de Clerk (producción)
 - [ ] `CLERK_SIGNING_SECRET` - Signing secret de Clerk para webhooks
-- [ ] `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Clave pública de Stripe (producción)
-- [ ] `STRIPE_SECRET_KEY` - Clave secreta de Stripe (producción)
-- [ ] `STRIPE_WEBHOOK_SECRET` - Webhook secret de Stripe
+
 - [ ] `MUX_TOKEN_ID` - Token ID de Mux
 - [ ] `MUX_TOKEN_SECRET` - Token secret de Mux
 - [ ] `MUX_WEBHOOK_SECRET` - Webhook secret de Mux
@@ -44,7 +42,7 @@ Este checklist te ayudará a asegurar que todo esté listo antes de hacer el dep
 
 ### 🔗 Servicios Externos
 - [ ] **Clerk**: Cuenta configurada en modo producción
-- [ ] **Stripe**: Cuenta en modo live (no test)
+
 - [ ] **Mux**: Cuenta activa con créditos
 - [ ] **UploadThing**: Cuenta configurada
 - [ ] **Upstash Redis**: Base de datos Redis creada
@@ -98,11 +96,7 @@ Este checklist te ayudará a asegurar que todo esté listo antes de hacer el dep
 - [ ] Los thumbnails se generan correctamente
 - [ ] Puedes reproducir videos
 
-### 💳 Pagos (Stripe)
-- [ ] Puedes crear un checkout
-- [ ] El flujo de pago funciona
-- [ ] Los webhooks de Stripe funcionan
-- [ ] Las suscripciones se crean correctamente
+
 
 ### 🗄️ Base de Datos
 - [ ] Ejecutaste el seed: `npm run seed`
@@ -117,7 +111,7 @@ Este checklist te ayudará a asegurar que todo esté listo antes de hacer el dep
 
 ### 🔗 Webhooks de Producción
 - [ ] **Mux Webhook**: URL actualizada a producción
-- [ ] **Stripe Webhook**: URL actualizada a producción
+
 - [ ] **Clerk Webhook**: URL actualizada a producción
 - [ ] Los webhook secrets están actualizados en las variables de entorno
 
