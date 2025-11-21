@@ -4,7 +4,7 @@ import { ResponsiveModal } from "@/components/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { api } from "@/trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2Icon, PlusIcon, UploadIcon } from "lucide-react";
+import { Loader2Icon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 import { StudioUploader } from "./studio-uploader";
 import { VideoPreviewForm } from "./video-preview-form";
@@ -17,6 +17,7 @@ export const StudioUploadModal = () => {
   const [step, setStep] = useState<UploadStep>("idle");
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [uploadUrl, setUploadUrl] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
 
   const create = api.videos.create.useMutation({
     onSuccess: (data) => {
@@ -38,6 +39,7 @@ export const StudioUploadModal = () => {
     setStep("idle");
     setUploadId(null);
     setUploadUrl(null);
+    setVideoDuration(0);
     create.reset();
   };
 
@@ -86,14 +88,17 @@ export const StudioUploadModal = () => {
                 endpoint={uploadUrl}
                 uploadId={uploadId}
                 onUploadComplete={handleUploadComplete}
-                onFileSelect={(file) => create.mutate({ contentType: file.type || "video/mp4" })}
+                onFileSelect={(file, duration) => {
+                  setVideoDuration(duration || 0);
+                  create.mutate({ contentType: file.type || "video/mp4" });
+                }}
               />
             </div>
           )}
 
           {step === "preview" && uploadId && (
             <div className="max-h-[80vh] overflow-y-auto">
-              <VideoPreviewForm uploadId={uploadId} onCancel={handleCancel} />
+              <VideoPreviewForm uploadId={uploadId} duration={videoDuration} onCancel={handleCancel} />
             </div>
           )}
 

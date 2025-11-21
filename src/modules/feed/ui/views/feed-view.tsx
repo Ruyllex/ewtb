@@ -31,11 +31,11 @@ export const FeedView = () => {
   // Actualizar el tab después de la hidratación basado en query params y estado de autenticación
   useEffect(() => {
     setIsMounted(true);
-    
+
     // Verificar si hay un query param para el tab
     const params = new URLSearchParams(window.location.search);
     const tabParam = params.get("tab");
-    
+
     if (tabParam === "personal" && isSignedIn) {
       setActiveTab("personal");
     } else if (isSignedIn && !tabParam) {
@@ -179,6 +179,8 @@ export const FeedView = () => {
                     previewUrl={video.previewUrl}
                     duration={video.duration}
                     createdAt={video.createdAt}
+                    likes={video.likes}
+                    viewCount={video.viewCount}
                     channel={video.channel}
                   />
                 ))}
@@ -217,6 +219,8 @@ export const FeedView = () => {
                     previewUrl={video.previewUrl}
                     duration={video.duration}
                     createdAt={video.createdAt}
+                    likes={video.likes}
+                    viewCount={video.viewCount}
                     channel={video.channel}
                   />
                 ))}

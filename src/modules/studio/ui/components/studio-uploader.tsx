@@ -10,7 +10,7 @@ interface StudioUploaderProps {
   endpoint?: string | null; // URL firmada de S3
   uploadId?: string | null; // s3Key
   onUploadComplete: (uploadId: string) => void;
-  onFileSelect?: (file: File) => void;
+  onFileSelect?: (file: File, duration?: number) => void;
 }
 
 export const StudioUploader = ({
@@ -110,15 +110,39 @@ export const StudioUploader = ({
         return;
       }
 
-      setSelectedFile(file);
-      setError(null);
-      if (onFileSelect) {
-        onFileSelect(file);
-      }
+      // Extract video duration
+      const videoElement = document.createElement('video');
+      videoElement.preload = 'metadata';
 
-      if (endpoint) {
-        uploadFile(file);
-      }
+      videoElement.onloadedmetadata = () => {
+        window.URL.revokeObjectURL(videoElement.src);
+        const durationInMs = Math.floor(videoElement.duration * 1000);
+
+        setSelectedFile(file);
+        setError(null);
+        if (onFileSelect) {
+          onFileSelect(file, durationInMs);
+        }
+
+        if (endpoint) {
+          uploadFile(file);
+        }
+      };
+
+      videoElement.onerror = () => {
+        window.URL.revokeObjectURL(videoElement.src);
+        setSelectedFile(file);
+        setError(null);
+        if (onFileSelect) {
+          onFileSelect(file, 0);
+        }
+
+        if (endpoint) {
+          uploadFile(file);
+        }
+      };
+
+      videoElement.src = URL.createObjectURL(file);
     },
     [uploadFile, endpoint, onFileSelect],
   );
@@ -189,12 +213,12 @@ export const StudioUploader = ({
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`relative overflow-hidden transition-all duration-300 ${isDragOver
-            ? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
-            : isUploading
-              ? "border-muted bg-white/20"
-              : isComplete
-                ? "border-green-500/50 bg-green-50/50"
-                : "border-muted hover:border-primary/50 hover:bg-white/20"
+          ? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
+          : isUploading
+            ? "border-muted bg-white/20"
+            : isComplete
+              ? "border-green-500/50 bg-green-50/50"
+              : "border-muted hover:border-primary/50 hover:bg-white/20"
           } ${isComplete ? "pointer-events-none" : ""}`}
       >
         <div className="p-8 md:p-12">
@@ -211,8 +235,8 @@ export const StudioUploader = ({
             ) : (
               <div
                 className={`flex items-center justify-center size-24 rounded-full transition-all duration-300 ${isDragOver
-                    ? "bg-primary/10 scale-110"
-                    : "bg-white/20 hover:bg-white/20"
+                  ? "bg-primary/10 scale-110"
+                  : "bg-white/20 hover:bg-white/20"
                   }`}
               >
                 <UploadIcon

@@ -162,6 +162,7 @@ export const videosRouter = createTRPCRouter({
         description: z.string().max(5000).optional(),
         categoryId: z.string().uuid().optional(),
         visibility: z.enum(["public", "private"]).default("private"),
+        duration: z.number().int().min(0).default(0),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -213,7 +214,7 @@ export const videosRouter = createTRPCRouter({
             visibility: input.visibility,
             s3Key,
             s3Url,
-            duration: 0, // Se puede actualizar después si se calcula la duración
+            duration: input.duration, // Duración extraída del cliente
           })
           .returning();
 
@@ -345,6 +346,27 @@ export const videosRouter = createTRPCRouter({
       const hasMore = results.length > limit;
       const items = hasMore ? results.slice(0, -1) : results;
 
+      // Calculate view counts for all videos
+      const videoIds = items.map(v => v.id);
+      const viewCountsMap = new Map<string, number>();
+
+      if (videoIds.length > 0) {
+        try {
+          const viewCounts = await db
+            .select({
+              videoId: views.videoId,
+              count: sql<number>`count(*)::int`
+            })
+            .from(views)
+            .where(inArray(views.videoId, videoIds))
+            .groupBy(views.videoId);
+
+          viewCounts.forEach(vc => viewCountsMap.set(vc.videoId, vc.count));
+        } catch (error) {
+          console.warn('[getTrending] Error fetching view counts:', error);
+        }
+      }
+
       const normalized = await Promise.all(items.map(async (item) => {
         let finalThumbnailUrl: string | null = null;
         if (item.thumbnailImage) {
@@ -361,6 +383,7 @@ export const videosRouter = createTRPCRouter({
           ...itemWithoutThumbnailImage,
           s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
           thumbnailUrl: finalThumbnailUrl,
+          viewCount: viewCountsMap.get(item.id) ?? 0,
           channel: {
             username: item.userUsername ?? null,
             name: item.channelName ?? null,
@@ -425,6 +448,7 @@ export const videosRouter = createTRPCRouter({
           s3Key: videos.s3Key,
           duration: videos.duration,
           createdAt: videos.createdAt,
+          likes: videos.likes,
 
           // Usuario (owner)
           userId: users.id,
@@ -446,6 +470,27 @@ export const videosRouter = createTRPCRouter({
       const hasMore = results.length > limit;
       const items = hasMore ? results.slice(0, -1) : results;
 
+      // Calculate view counts for all videos
+      const videoIds = items.map(v => v.id);
+      const viewCountsMap = new Map<string, number>();
+
+      if (videoIds.length > 0) {
+        try {
+          const viewCounts = await db
+            .select({
+              videoId: views.videoId,
+              count: sql<number>`count(*)::int`
+            })
+            .from(views)
+            .where(inArray(views.videoId, videoIds))
+            .groupBy(views.videoId);
+
+          viewCounts.forEach(vc => viewCountsMap.set(vc.videoId, vc.count));
+        } catch (error) {
+          console.warn('[getMany] Error fetching view counts:', error);
+        }
+      }
+
       // Normalizar y construir objeto channel en cada item
       const normalized = await Promise.all(items.map(async (item) => {
         // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
@@ -465,6 +510,7 @@ export const videosRouter = createTRPCRouter({
           ...itemWithoutThumbnailImage,
           s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
           thumbnailUrl: finalThumbnailUrl,
+          viewCount: viewCountsMap.get(item.id) ?? 0,
           channel: {
             username: item.userUsername ?? null, // username del owner (guardado en users.username)
             name: item.channelName ?? null,
@@ -760,6 +806,7 @@ export const videosRouter = createTRPCRouter({
           s3Key: videos.s3Key,
           duration: videos.duration,
           createdAt: videos.createdAt,
+          likes: videos.likes,
           userId: users.id,
           userName: users.name,
           userUsername: users.username,
@@ -777,8 +824,30 @@ export const videosRouter = createTRPCRouter({
       const hasMore = results.length > limit;
       const items = hasMore ? results.slice(0, -1) : results;
 
+      // Calculate view counts for all videos
+      const videoIds = items.map(v => v.id);
+      const viewCountsMap = new Map<string, number>();
+
+      if (videoIds.length > 0) {
+        try {
+          const viewCounts = await db
+            .select({
+              videoId: views.videoId,
+              count: sql<number>`count(*)::int`
+            })
+            .from(views)
+            .where(inArray(views.videoId, videoIds))
+            .groupBy(views.videoId);
+
+          viewCounts.forEach(vc => viewCountsMap.set(vc.videoId, vc.count));
+        } catch (error) {
+          console.warn('[getPersonalFeed] Error fetching view counts:', error);
+        }
+      }
+
       const normalized = items.map((item) => ({
         ...item,
+        viewCount: viewCountsMap.get(item.id) ?? 0,
         channel: {
           username: item.userUsername ?? null,
           name: item.channelName ?? null,

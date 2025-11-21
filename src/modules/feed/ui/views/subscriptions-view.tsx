@@ -94,6 +94,8 @@ export const SubscriptionsView = () => {
                                 previewUrl={video.previewUrl}
                                 duration={video.duration}
                                 createdAt={video.createdAt}
+                                likes={video.likes}
+                                viewCount={video.viewCount}
                                 channel={video.channel}
                             />
                         ))}

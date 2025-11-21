@@ -39,9 +39,10 @@ import { UploadDropzone } from "@/lib/uploadthing";
 interface VideoPreviewFormProps {
   uploadId: string;
   onCancel: () => void;
+  duration?: number;
 }
 
-export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) => {
+export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPreviewFormProps) => {
   const queryClient = useQueryClient();
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -101,6 +102,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
       description: description.trim() || undefined,
       categoryId: categoryId || undefined,
       visibility,
+      duration,
     });
   };
 

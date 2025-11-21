@@ -1,11 +1,19 @@
 "use client";
 
-import { Heart } from "lucide-react";
+import { Heart, ThumbsUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { useLike } from "../../hooks/useLike";
 
-export function LikeButton({ videoId }: { videoId: string }) {
+interface LikeButtonProps {
+  videoId: string;
+  variant?: "heart" | "thumbsUp";
+}
+
+export function LikeButton({ videoId, variant = "heart" }: LikeButtonProps) {
   const { liked, toggle, isLoading } = useLike(videoId);
+
+  const Icon = variant === "thumbsUp" ? ThumbsUp : Heart;
+  const likedColor = variant === "thumbsUp" ? "text-[#5ADBFD] fill-[#5ADBFD]" : "text-red-500 fill-red-500";
 
   return (
     <motion.button
@@ -16,8 +24,8 @@ export function LikeButton({ videoId }: { videoId: string }) {
       aria-pressed={liked}
       title={liked ? "Unlike" : "Like"}
     >
-      <Heart
-        className={`w-6 h-6 transition-all ${liked ? "text-red-500 fill-red-500" : "text-gray-400"}`}
+      <Icon
+        className={`w-6 h-6 transition-all ${liked ? likedColor : "text-gray-400"}`}
       />
     </motion.button>
   );

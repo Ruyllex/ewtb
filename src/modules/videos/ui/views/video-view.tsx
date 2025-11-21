@@ -1,7 +1,7 @@
 "use client";
 
 // Usamos el alias 'trpc' para el helper tRPC, asumiendo 'api' se exporta desde client.tsx
-import { api as trpc } from "@/trpc/client"; 
+import { api as trpc } from "@/trpc/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import VideoPlayer from "../components/video-player";
@@ -129,7 +129,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                     <TimeAgo date={video.createdAt} />
                   </div>
                   <div className="rounded-full border px-3 py-1">
-                    <LikeSection videoId={videoId} />
+                    <LikeSection videoId={videoId} variant="thumbsUp" />
                   </div>
                 </div>
               </div>

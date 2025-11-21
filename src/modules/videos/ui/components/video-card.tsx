@@ -6,6 +6,8 @@ import { useState } from "react";
 import { TimeAgo } from "@/components/time-ago";
 import { VideoThumbnail } from "./video-thumbnail";
 import { THUMBNAIL_FALLBACK } from "../../constants";
+import { Eye, Heart } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 interface ChannelLite {
   username?: string | null;
@@ -21,6 +23,8 @@ interface VideoCardProps {
   previewUrl?: string | null;
   duration: number;
   createdAt: Date;
+  likes?: number;
+  viewCount?: number;
 
   // Nuevas / preferidas
   channel?: ChannelLite | null;
@@ -62,6 +66,8 @@ export const VideoCard = ({
   previewUrl,
   duration,
   createdAt,
+  likes = 0,
+  viewCount = 0,
   channel,
   userName,
   userUsername,
@@ -111,8 +117,8 @@ export const VideoCard = ({
             className="object-cover"
             onError={() => setAvatarBroken(true)}
             priority={avatarPriority}
-            // si Next sigue rompiendo por CDN, descomenta `unoptimized`
-            // unoptimized
+          // si Next sigue rompiendo por CDN, descomenta `unoptimized`
+          // unoptimized
           />
         </Link>
 
@@ -137,7 +143,15 @@ export const VideoCard = ({
             )
           ) : null}
 
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+            <div className="flex items-center gap-1">
+              <Eye className="w-4 h-4" />
+              <span>{formatNumber(viewCount)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Heart className="w-4 h-4" />
+              <span>{formatNumber(likes)}</span>
+            </div>
             <TimeAgo date={createdAt} />
           </div>
         </div>
