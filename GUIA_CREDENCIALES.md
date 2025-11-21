@@ -12,7 +12,6 @@ Esta guía te ayudará a obtener todas las credenciales necesarias para configur
 - [ ] **Mux Live** - Streaming en vivo (2 variables, opcional)
 - [ ] **UploadThing** - Gestión de archivos (1 variable)
 - [ ] **Upstash Redis** - Caching (2 variables)
-- [ ] **Stripe** - Pagos (3 variables, opcional)
 
 ---
 
@@ -128,35 +127,7 @@ Esta guía te ayudará a obtener todas las credenciales necesarias para configur
 
 ---
 
-## 5. 💳 Stripe - Pagos (Opcional)
 
-### Pasos:
-1. Ve a [https://dashboard.stripe.com](https://dashboard.stripe.com)
-2. Inicia sesión o crea una cuenta
-3. Asegúrate de estar en **Test mode** para desarrollo
-4. Ve a **Developers** > **API keys**
-
-### Variables a copiar:
-
-#### `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-- Ubicación: API keys > **Publishable key**
-- Formato: `pk_test_...` o `pk_live_...`
-- ✅ Se usa en el frontend
-
-#### `STRIPE_SECRET_KEY`
-- Ubicación: API keys > **Secret key**
-- Formato: `sk_test_...` o `sk_live_...`
-- 🔒 Solo servidor
-
-#### `STRIPE_WEBHOOK_SECRET`
-- Ubicación: **Developers** > **Webhooks** > **Add endpoint**
-- Pasos:
-  1. Haz clic en **Add endpoint**
-  2. URL: `https://tu-dominio.com/api/stripe/webhook` (o usa ngrok)
-  3. Selecciona los eventos que necesites
-  4. Copia el **Signing secret**
-
----
 
 ## 🚀 Configuración para Desarrollo Local
 

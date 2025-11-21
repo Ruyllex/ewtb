@@ -19,8 +19,8 @@
 │   Radix UI             Procedures                               │
 │                                                                 │
 │  Servicios Externos:                                            │
-│  • Clerk (Auth)        • Mux (Video)    • Stripe (Pagos)       │
-│  • UploadThing (Files) • Redis (Cache)  • Sentry (Errors)      │
+│  • Clerk (Auth)        • Mux (Video)    • UploadThing (Files)  │
+│  • Redis (Cache)       • Sentry (Errors) • Logtail (Logs)      │
 │                        • Logtail (Logs)                         │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘

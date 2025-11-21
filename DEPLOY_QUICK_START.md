@@ -105,7 +105,7 @@ npm run seed
 Actualiza los webhooks en cada servicio para que apunten a tu URL de producción:
 
 - **Mux:** `https://tu-app.ondigitalocean.app/api/videos/webhook`
-- **Stripe:** `https://tu-app.ondigitalocean.app/api/webhooks/stripe`
+
 - **Clerk:** `https://tu-app.ondigitalocean.app/api/users/webhook`
 
 ### 3. Verificar

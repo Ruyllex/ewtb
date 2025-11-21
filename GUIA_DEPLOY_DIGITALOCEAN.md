@@ -25,7 +25,7 @@ Antes de comenzar, asegúrate de tener:
 - ✅ Cuentas configuradas en:
   - Clerk (autenticación)
   - Mux (video streaming)
-  - Stripe (pagos)
+
   - UploadThing (archivos)
   - Upstash Redis (caching)
 
@@ -118,10 +118,7 @@ CLERK_SECRET_KEY=sk_live_...
 CLERK_SIGNING_SECRET=whsec_...
 NEXT_PUBLIC_CLERK_URL=https://tu-app-url.ondigitalocean.app
 
-# Stripe (Pagos)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
+
 
 # Mux (Video Streaming)
 MUX_TOKEN_ID=tu_token_id
@@ -401,15 +398,7 @@ Después del deploy, necesitas actualizar los webhooks para que apunten a tu URL
 4. Guarda y copia el nuevo **Signing Secret**
 5. Actualiza `MUX_WEBHOOK_SECRET` en DigitalOcean App Platform
 
-### 2. Webhooks de Stripe
 
-1. Ve a [https://dashboard.stripe.com](https://dashboard.stripe.com)
-2. Ve a **Developers** > **Webhooks**
-3. Crea un nuevo endpoint:
-   - **URL:** `https://tu-app-url.ondigitalocean.app/api/webhooks/stripe`
-   - **Events:** Selecciona los eventos que necesitas (ej: `checkout.session.completed`)
-4. Guarda y copia el **Signing Secret**
-5. Actualiza `STRIPE_WEBHOOK_SECRET` en DigitalOcean App Platform
 
 ### 3. Webhooks de Clerk
 
