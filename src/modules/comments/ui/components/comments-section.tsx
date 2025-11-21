@@ -32,23 +32,23 @@ export const CommentsSection = ({ videoId }: CommentsSectionProps) => {
 
   // Mutación para agregar comentario
   const addComment = api.comment.add.useMutation({
-      onSuccess: () => {
-        setCommentText("");
-        queryClient.invalidateQueries({
-          queryKey: [["comment", "list"]],
-        });
-        // Scroll al final después de un breve delay
-        setTimeout(() => {
-          commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-        }, 100);
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al agregar el comentario");
-      },
-      onSettled: () => {
-        setIsSubmitting(false);
-      },
-    });
+    onSuccess: () => {
+      setCommentText("");
+      queryClient.invalidateQueries({
+        queryKey: [["comment", "list"]],
+      });
+      // Scroll al final después de un breve delay
+      setTimeout(() => {
+        commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al agregar el comentario");
+    },
+    onSettled: () => {
+      setIsSubmitting(false);
+    },
+  });
 
   // Suscribirse a eventos de Pusher para comentarios en tiempo real
   useEffect(() => {
@@ -125,7 +125,7 @@ export const CommentsSection = ({ videoId }: CommentsSectionProps) => {
             </div>
           </form>
         ) : (
-          <div className="mb-6 p-4 border rounded-lg bg-muted/50">
+          <div className="mb-6 p-4 border rounded-lg bg-white/20">
             <p className="text-sm text-muted-foreground">
               <Link href="/sign-in" className="text-primary hover:underline">
                 Inicia sesión

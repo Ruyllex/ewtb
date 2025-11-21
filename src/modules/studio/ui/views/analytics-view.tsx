@@ -144,7 +144,7 @@ export const AnalyticsView = () => {
             <CardDescription>Estimación de las últimas 48 horas.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-xl border border-border/70 bg-muted/10 p-4">
+            <div className="rounded-xl border border-border/70 bg-white/20 p-4">
               <p className="text-sm text-muted-foreground">Visualizaciones (48 h)</p>
               <p className="text-3xl font-semibold">{numberFormatter.format(last48hViews)}</p>
             </div>
@@ -179,7 +179,7 @@ export const AnalyticsView = () => {
               {topVideos.map((video) => (
                 <div key={video.id} className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-3">
                   <div className="flex items-center gap-3">
-                    <div className="relative h-16 w-28 overflow-hidden rounded-lg bg-muted">
+                    <div className="relative h-16 w-28 overflow-hidden rounded-lg bg-white/20">
                       {video.thumbnailUrl ? (
                         <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
                       ) : (

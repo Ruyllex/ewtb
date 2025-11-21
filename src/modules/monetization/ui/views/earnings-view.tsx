@@ -54,29 +54,29 @@ export const EarningsView = () => {
   });
 
   const verifyMonetization = trpc.monetization.verifyMonetization.useMutation({
-      onSuccess: (data) => {
-        if (data.can) {
-          toast.success("¡Monetización habilitada exitosamente!");
-        } else {
-          toast.error(`No puedes monetizar aún: ${data.reasons.join(", ")}`);
-        }
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al verificar monetización");
-      },
-    });
+    onSuccess: (data) => {
+      if (data.can) {
+        toast.success("¡Monetización habilitada exitosamente!");
+      } else {
+        toast.error(`No puedes monetizar aún: ${data.reasons.join(", ")}`);
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al verificar monetización");
+    },
+  });
 
   const createPayout = trpc.monetization.createPayoutRequest.useMutation({
-      onSuccess: () => {
-        toast.success("Retiro solicitado exitosamente");
-        setShowPayoutModal(false);
-        setPayoutAmount("");
-        refetchEarnings();
-      },
-      onError: (error) => {
-        toast.error(error.message || "Error al crear retiro");
-      },
-    });
+    onSuccess: () => {
+      toast.success("Retiro solicitado exitosamente");
+      setShowPayoutModal(false);
+      setPayoutAmount("");
+      refetchEarnings();
+    },
+    onError: (error) => {
+      toast.error(error.message || "Error al crear retiro");
+    },
+  });
 
   const handleConnectPayPal = async () => {
     try {
@@ -129,8 +129,8 @@ export const EarningsView = () => {
             <h1 className="text-3xl font-bold">Ganancias</h1>
             <p className="text-muted-foreground mt-1">Gestiona tus ganancias y retiros</p>
           </div>
-          <Button 
-            onClick={() => setShowPayoutModal(true)} 
+          <Button
+            onClick={() => setShowPayoutModal(true)}
             disabled={parseFloat(balance.availableBalance) < 20 || !connectStatus?.canMonetize || !connectStatus?.connected || connectStatus.accountStatus?.status !== "active"}
             variant={parseFloat(balance.availableBalance) >= 20 && connectStatus?.canMonetize && connectStatus?.connected && connectStatus.accountStatus?.status === "active" ? "default" : "outline"}
           >
@@ -258,8 +258,8 @@ export const EarningsView = () => {
             <CardContent>
               <div className="text-2xl font-bold">${parseFloat(balance.availableBalance).toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                {parseFloat(balance.availableBalance) >= 20 
-                  ? "Listo para retirar" 
+                {parseFloat(balance.availableBalance) >= 20
+                  ? "Listo para retirar"
                   : `Necesitas $${(20 - parseFloat(balance.availableBalance)).toFixed(2)} más para solicitar retiro`}
               </p>
             </CardContent>
@@ -273,8 +273,8 @@ export const EarningsView = () => {
             <CardContent>
               <div className="text-2xl font-bold">${parseFloat(balance.pendingBalance || "0").toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">
-                {parseFloat(balance.pendingBalance || "0") > 0 
-                  ? "En proceso de retiro" 
+                {parseFloat(balance.pendingBalance || "0") > 0
+                  ? "En proceso de retiro"
                   : "No hay retiros pendientes"}
               </p>
             </CardContent>
@@ -329,8 +329,8 @@ export const EarningsView = () => {
                 Próximo Retiro
               </CardTitle>
               <CardDescription>
-                {earnings.nextPayout.status === "pending" 
-                  ? "Tu solicitud de retiro está pendiente de aprobación" 
+                {earnings.nextPayout.status === "pending"
+                  ? "Tu solicitud de retiro está pendiente de aprobación"
                   : "Tu retiro está siendo procesado por PayPal"}
               </CardDescription>
             </CardHeader>
@@ -355,7 +355,7 @@ export const EarningsView = () => {
                     <TimeAgo date={earnings.nextPayout.createdAt} />
                   </span>
                 </div>
-                <Badge 
+                <Badge
                   variant={earnings.nextPayout.status === "processing" ? "default" : "secondary"}
                   className="mt-2"
                 >
@@ -397,11 +397,11 @@ export const EarningsView = () => {
                     {stats.totalStarsTips.toLocaleString()} Stars recibidas
                   </p>
                 )}
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-yellow-500" 
-                    style={{ 
-                      width: `${stats.totalEarned > 0 ? (stats.totalTips / stats.totalEarned) * 100 : 0}%` 
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-yellow-500"
+                    style={{
+                      width: `${stats.totalEarned > 0 ? (stats.totalTips / stats.totalEarned) * 100 : 0}%`
                     }}
                   />
                 </div>
@@ -414,11 +414,11 @@ export const EarningsView = () => {
                   </span>
                   <span className="font-semibold">${stats.totalSubscriptions.toFixed(2)}</span>
                 </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-blue-500" 
-                    style={{ 
-                      width: `${stats.totalEarned > 0 ? (stats.totalSubscriptions / stats.totalEarned) * 100 : 0}%` 
+                <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-500"
+                    style={{
+                      width: `${stats.totalEarned > 0 ? (stats.totalSubscriptions / stats.totalEarned) * 100 : 0}%`
                     }}
                   />
                 </div>
@@ -455,41 +455,41 @@ export const EarningsView = () => {
                   "Suscripciones": day.subscriptions,
                 }))}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    dataKey="date" 
+                  <XAxis
+                    dataKey="date"
                     tick={{ fontSize: 12 }}
                     angle={-45}
                     textAnchor="end"
                     height={80}
                   />
                   <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => `$${value.toFixed(2)}`}
-                    contentStyle={{ 
+                    contentStyle={{
                       backgroundColor: "var(--background)",
                       border: "1px solid var(--border)",
                       borderRadius: "6px"
                     }}
                   />
                   <Legend />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Total" 
-                    stroke="hsl(var(--chart-1))" 
+                  <Line
+                    type="monotone"
+                    dataKey="Total"
+                    stroke="hsl(var(--chart-1))"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Tips" 
-                    stroke="hsl(var(--chart-2))" 
+                  <Line
+                    type="monotone"
+                    dataKey="Tips"
+                    stroke="hsl(var(--chart-2))"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="Suscripciones" 
-                    stroke="hsl(var(--chart-3))" 
+                  <Line
+                    type="monotone"
+                    dataKey="Suscripciones"
+                    stroke="hsl(var(--chart-3))"
                     strokeWidth={2}
                     dot={{ r: 3 }}
                   />
@@ -605,7 +605,7 @@ export const EarningsView = () => {
                   <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4 flex-1">
                       {transaction.video && (
-                        <div className="relative w-16 h-9 rounded overflow-hidden bg-muted">
+                        <div className="relative w-16 h-9 rounded overflow-hidden bg-white/20">
                           {transaction.video.thumbnailUrl && (
                             <Image
                               src={transaction.video.thumbnailUrl}
@@ -691,7 +691,7 @@ export const EarningsView = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="payout-amount">Monto a retirar (USD)</Label>
-              <Input
+            <Input
               id="payout-amount"
               type="number"
               min="20"
@@ -709,7 +709,7 @@ export const EarningsView = () => {
             </p>
           </div>
 
-          <div className="bg-muted p-4 rounded-lg">
+          <div className="bg-white/20 p-4 rounded-lg">
             <p className="text-sm text-muted-foreground">
               Tu solicitud de retiro será enviada a los administradores para su revisión. Una vez aprobada, el pago se procesará automáticamente a tu cuenta de PayPal. Puede tomar 2-5 días
               hábiles. La plataforma retiene una comisión del 3% sobre el monto solicitado.

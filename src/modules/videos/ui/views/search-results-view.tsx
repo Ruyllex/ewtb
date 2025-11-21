@@ -34,7 +34,7 @@ const SearchResultsSkeleton = () => {
 
 export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
   const router = useRouter();
-  
+
   if (!query) {
     return (
       <div className="max-w-[2400px] mx-auto px-4 py-6">
@@ -109,7 +109,7 @@ export const SearchResultsView = ({ query }: SearchResultsViewProps) => {
                 href={`/channel/${channel.userUsername || ""}`}
                 className="flex gap-4 hover:bg-gray-50 p-4 rounded-lg transition-colors border"
               >
-                <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden bg-muted">
+                <div className="relative w-16 h-16 shrink-0 rounded-full overflow-hidden bg-white/20">
                   <Image
                     src={channel.avatar || channel.userImageUrl || THUMBNAIL_FALLBACK}
                     alt={channel.name}

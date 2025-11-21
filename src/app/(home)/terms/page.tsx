@@ -81,7 +81,7 @@ export default function TermsPage() {
               </p>
             </section>
 
-            <div className="mt-8 p-4 bg-muted rounded-lg">
+            <div className="mt-8 p-4 bg-white/20 rounded-lg">
               <p className="text-sm text-muted-foreground">
                 <strong>Nota:</strong> Este es un contenido placeholder. Por favor, reemplace este
                 contenido con los términos de servicio reales de su plataforma, revisados por un

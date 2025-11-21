@@ -124,10 +124,10 @@ export const SettingsView = () => {
   const handleDateChange = (value: string) => {
     // Permitir solo números y barras
     const cleaned = value.replace(/[^\d/]/g, "");
-    
+
     // Limitar la longitud
     if (cleaned.length > 10) return;
-    
+
     // Formatear automáticamente con barras
     let formatted = cleaned;
     if (cleaned.length > 2 && cleaned[2] !== "/") {
@@ -136,7 +136,7 @@ export const SettingsView = () => {
     if (cleaned.length > 5 && cleaned[5] !== "/") {
       formatted = cleaned.slice(0, 5) + "/" + cleaned.slice(5);
     }
-    
+
     setDateOfBirth(formatted);
   };
 
@@ -149,7 +149,7 @@ export const SettingsView = () => {
     // Validar formato dd/mm/aaaa
     const dateRegex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     const match = dateOfBirth.match(dateRegex);
-    
+
     if (!match) {
       toast.error("Formato de fecha inválido. Usa dd/mm/aaaa");
       return;
@@ -176,7 +176,7 @@ export const SettingsView = () => {
     // Crear fecha usando el constructor que evita problemas de zona horaria
     // new Date(year, monthIndex, day) crea la fecha en la zona horaria local
     const date = new Date(year, month - 1, day);
-    
+
     // Verificar que la fecha es válida (ej: 31/02/2001 no es válida)
     if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
       toast.error("La fecha ingresada no es válida");
@@ -215,7 +215,7 @@ export const SettingsView = () => {
         <CardContent className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name">Nombre</Label>
-            <Input id="name" value={profile?.name || ""} disabled className="bg-muted" />
+            <Input id="name" value={profile?.name || ""} disabled className="bg-white/20" />
             <p className="text-xs text-muted-foreground">
               El nombre se actualiza automáticamente desde tu cuenta de Clerk
             </p>
@@ -287,7 +287,7 @@ export const SettingsView = () => {
             {/* Banner */}
             <div className="space-y-2">
               <Label>Banner del Canal</Label>
-              <div className="relative w-full h-48 rounded-lg overflow-hidden bg-muted border">
+              <div className="relative w-full h-48 rounded-lg overflow-hidden bg-white/20 border">
                 {channel.banner ? (
                   <Image
                     src={channel.banner}
@@ -338,7 +338,7 @@ export const SettingsView = () => {
             <div className="space-y-2">
               <Label>Avatar del Canal</Label>
               <div className="flex items-center gap-4">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-muted border-2 shrink-0">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden bg-white/20 border-2 shrink-0">
                   {channel.avatar ? (
                     <Image
                       src={channel.avatar}
@@ -557,7 +557,7 @@ export const SettingsView = () => {
             </p>
           </div>
 
-          <div className="space-y-4 bg-muted p-4 rounded-lg dark:bg-muted/10">
+          <div className="space-y-4 bg-white/20 p-4 rounded-lg dark:bg-white/20">
             <p className="text-sm font-semibold">Términos de Monetización</p>
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>Al solicitar la monetización, aceptas los siguientes términos:</p>

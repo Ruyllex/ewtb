@@ -65,7 +65,7 @@ export const ChannelLiveStreams = ({ username }: ChannelLiveStreamsProps) => {
                   streamType="live"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center bg-muted">
+                <div className="w-full h-full flex items-center justify-center bg-white/20">
                   <RadioIcon className="h-12 w-12 text-muted-foreground" />
                 </div>
               )}

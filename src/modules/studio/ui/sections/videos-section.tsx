@@ -71,10 +71,10 @@ export const VideosSection = () => {
           </TableHeader>
           <TableBody>
             {allVideos.map((video) => (
-              <TableRow key={video.id} className="cursor-pointer hover:bg-muted/50">
+              <TableRow key={video.id} className="cursor-pointer hover:bg-white/20">
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <div className="relative w-24 h-16 flex-shrink-0 rounded overflow-hidden bg-muted">
+                    <div className="relative w-24 h-16 flex-shrink-0 rounded overflow-hidden bg-white/20">
                       {video.thumbnailUrl ? (
                         <Image
                           src={video.thumbnailUrl}

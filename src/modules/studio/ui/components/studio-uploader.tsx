@@ -188,15 +188,14 @@ export const StudioUploader = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative overflow-hidden transition-all duration-300 ${
-          isDragOver
+        className={`relative overflow-hidden transition-all duration-300 ${isDragOver
             ? "border-primary bg-primary/5 shadow-lg scale-[1.02]"
             : isUploading
-              ? "border-muted bg-muted/5"
+              ? "border-muted bg-white/20"
               : isComplete
                 ? "border-green-500/50 bg-green-50/50"
-                : "border-muted hover:border-primary/50 hover:bg-muted/30"
-        } ${isComplete ? "pointer-events-none" : ""}`}
+                : "border-muted hover:border-primary/50 hover:bg-white/20"
+          } ${isComplete ? "pointer-events-none" : ""}`}
       >
         <div className="p-8 md:p-12">
           <div className="flex flex-col items-center gap-6 text-center">
@@ -211,16 +210,14 @@ export const StudioUploader = ({
               </div>
             ) : (
               <div
-                className={`flex items-center justify-center size-24 rounded-full transition-all duration-300 ${
-                  isDragOver
+                className={`flex items-center justify-center size-24 rounded-full transition-all duration-300 ${isDragOver
                     ? "bg-primary/10 scale-110"
-                    : "bg-muted hover:bg-muted/80"
-                }`}
+                    : "bg-white/20 hover:bg-white/20"
+                  }`}
               >
                 <UploadIcon
-                  className={`size-12 transition-all duration-300 ${
-                    isDragOver ? "text-primary animate-bounce" : "text-muted-foreground"
-                  }`}
+                  className={`size-12 transition-all duration-300 ${isDragOver ? "text-primary animate-bounce" : "text-muted-foreground"
+                    }`}
                 />
               </div>
             )}
@@ -280,7 +277,7 @@ export const StudioUploader = ({
 
             {/* Selected File Info */}
             {selectedFile && !isUploading && !isComplete && (
-              <Card className="w-full max-w-md p-4 bg-muted/50">
+              <Card className="w-full max-w-md p-4 bg-white/20">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center justify-center size-12 rounded-lg bg-primary/10">
                     <VideoIcon className="size-6 text-primary" />

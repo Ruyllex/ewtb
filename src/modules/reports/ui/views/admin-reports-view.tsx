@@ -282,7 +282,7 @@ export const AdminReportsView = () => {
                             <div className="flex-1">
                               <div className="flex items-start gap-4">
                                 {report.video.thumbnailUrl && (
-                                  <div className="relative w-24 h-16 rounded overflow-hidden bg-muted shrink-0">
+                                  <div className="relative w-24 h-16 rounded overflow-hidden bg-white/20 shrink-0">
                                     <Image
                                       src={report.video.thumbnailUrl}
                                       alt={report.video.title || "Video"}
@@ -313,7 +313,7 @@ export const AdminReportsView = () => {
                           {report.user && (
                             <div className="flex-1">
                               <div className="flex items-start gap-4">
-                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-muted shrink-0">
+                                <div className="relative w-12 h-12 rounded-full overflow-hidden bg-white/20 shrink-0">
                                   <Image
                                     src={report.user.imageUrl || "/user-placeholder.svg"}
                                     alt={report.user.name || "Usuario"}

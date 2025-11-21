@@ -182,7 +182,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Video Preview Section */}
           {uploadStatus.ready && uploadStatus.previewUrl && (
-            <Card className="p-6 bg-muted/30">
+            <Card className="p-6 bg-white/20">
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <VideoIcon className="size-5 text-primary" />
@@ -231,11 +231,10 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
                       );
                     }
                   }}
-                  className={`relative w-full sm:w-80 aspect-video rounded-lg overflow-hidden border-2 border-dashed transition-all duration-200 group ${
-                    videoId
-                      ? "border-muted-foreground/30 hover:border-primary bg-muted/30 hover:bg-muted/50 cursor-pointer"
-                      : "border-muted-foreground/20 bg-muted/20 opacity-60 cursor-not-allowed"
-                  }`}
+                  className={`relative w-full sm:w-80 aspect-video rounded-lg overflow-hidden border-2 border-dashed transition-all duration-200 group ${videoId
+                    ? "border-muted-foreground/30 hover:border-primary bg-white/20 hover:bg-white/20 cursor-pointer"
+                    : "border-muted-foreground/20 bg-white/20 opacity-60 cursor-not-allowed"
+                    }`}
                   disabled={!videoId}
                   title={
                     !videoId
@@ -260,7 +259,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
                     </>
                   ) : (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-muted-foreground p-4">
-                      <div className="size-16 rounded-full bg-muted flex items-center justify-center">
+                      <div className="size-16 rounded-full bg-white/20 flex items-center justify-center">
                         <ImageIcon className="size-8" />
                       </div>
                       <div className="text-center">
@@ -273,7 +272,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
 
                 {/* Info Card */}
                 <div className="flex-1 space-y-3">
-                  <Card className="p-4 bg-muted/50 border-dashed">
+                  <Card className="p-4 bg-white/20 border-dashed">
                     <div className="space-y-2 text-sm">
                       <p className="font-semibold flex items-center gap-2">
                         <FileTextIcon className="size-4" />
@@ -317,7 +316,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel }: VideoPreviewFormProps) 
                   </Label>
                   <Input
                     id="title"
-                    value={title}
+                    value={title ?? ""}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Ej: Tutorial de React - Hooks Avanzados"
                     required

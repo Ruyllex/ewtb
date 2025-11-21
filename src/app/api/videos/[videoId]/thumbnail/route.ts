@@ -1,7 +1,9 @@
 import { db } from "@/db";
 import { videos } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import { users } from "@/db/schema";
 
 // Configuración para Next.js 15
 export const dynamic = "force-dynamic";
@@ -43,7 +45,7 @@ export async function GET(
         // Si es un objeto con data o similar
         buffer = Buffer.from(video.thumbnailImage as any);
       }
-      
+
       let contentType = "image/jpeg"; // Por defecto JPEG
 
       // Detectar el tipo de imagen basado en los magic bytes
@@ -75,6 +77,78 @@ export async function GET(
     return new NextResponse("Thumbnail not found", { status: 404 });
   } catch (error) {
     console.error("Error al obtener thumbnail:", error);
+    return new NextResponse("Internal Server Error", { status: 500 });
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ videoId: string }> | { videoId: string } }
+) {
+  try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const params = await Promise.resolve(context.params);
+    const { videoId } = params;
+
+    // Obtener el usuario de la BD para tener su UUID
+    const [user] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(eq(users.clerkId, clerkUserId))
+      .limit(1);
+
+    if (!user) {
+      return new NextResponse("User not found", { status: 401 });
+    }
+
+    // Verificar propiedad del video
+    const [video] = await db
+      .select()
+      .from(videos)
+      .where(and(eq(videos.id, videoId), eq(videos.userId, user.id)))
+      .limit(1);
+
+    if (!video) {
+      return new NextResponse("Video not found or unauthorized", { status: 404 });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get("file") as File | null;
+
+    if (!file) {
+      return new NextResponse("No file provided", { status: 400 });
+    }
+
+    // Validar tamaño (ej. 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      return new NextResponse("File too large (max 5MB)", { status: 400 });
+    }
+
+    // Validar tipo
+    if (!file.type.startsWith("image/")) {
+      return new NextResponse("Invalid file type", { status: 400 });
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    await db
+      .update(videos)
+      .set({
+        thumbnailImage: buffer,
+        thumbnailKey: null, // Limpiar referencias antiguas
+        thumbnailUrl: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(videos.id, videoId));
+
+    return new NextResponse("Thumbnail uploaded successfully", { status: 200 });
+  } catch (error) {
+    console.error("Error uploading thumbnail:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }

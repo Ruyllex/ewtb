@@ -110,7 +110,9 @@ export const videosRouter = createTRPCRouter({
       throw new TRPCError({ code: "NOT_FOUND" });
     }
 
-    return updatedVideo;
+    const { thumbnailImage, ...videoWithoutImage } = updatedVideo;
+
+    return videoWithoutImage;
   }),
 
   create: protectedProcedure
@@ -286,6 +288,98 @@ export const videosRouter = createTRPCRouter({
     }),
 
   // Public procedures
+  getTrending: baseProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            likes: z.number(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      const { limit, cursor } = input;
+
+      const whereConditions = [
+        eq(videos.visibility, "public"),
+        cursor
+          ? sql`(${videos.likes} < ${cursor.likes} OR (${videos.likes} = ${cursor.likes} AND ${videos.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const results = await db
+        .select({
+          id: videos.id,
+          title: videos.title,
+          description: videos.description,
+          thumbnailUrl: videos.thumbnailUrl,
+          thumbnailKey: videos.thumbnailKey,
+          thumbnailImage: videos.thumbnailImage,
+          previewUrl: videos.previewUrl,
+          s3Url: videos.s3Url,
+          s3Key: videos.s3Key,
+          duration: videos.duration,
+          createdAt: videos.createdAt,
+          likes: videos.likes,
+
+          // Usuario (owner)
+          userId: users.id,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+
+          // Channel
+          channelName: channels.name,
+          channelAvatar: channels.avatar,
+        })
+        .from(videos)
+        .innerJoin(users, eq(videos.userId, users.id))
+        .leftJoin(channels, eq(channels.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(videos.likes), desc(videos.id))
+        .limit(limit + 1);
+
+      const hasMore = results.length > limit;
+      const items = hasMore ? results.slice(0, -1) : results;
+
+      const normalized = await Promise.all(items.map(async (item) => {
+        let finalThumbnailUrl: string | null = null;
+        if (item.thumbnailImage) {
+          finalThumbnailUrl = `/api/videos/${item.id}/thumbnail`;
+        } else if (item.thumbnailKey) {
+          finalThumbnailUrl = await getSignedDownloadUrl(item.thumbnailKey);
+        } else {
+          finalThumbnailUrl = item.thumbnailUrl;
+        }
+
+        const { thumbnailImage, ...itemWithoutThumbnailImage } = item;
+
+        return {
+          ...itemWithoutThumbnailImage,
+          s3Url: item.s3Key ? await getSignedDownloadUrl(item.s3Key) : item.s3Url,
+          thumbnailUrl: finalThumbnailUrl,
+          channel: {
+            username: item.userUsername ?? null,
+            name: item.channelName ?? null,
+            avatarUrl: normalizeAvatar(item.channelAvatar ?? null, item.userImageUrl ?? null),
+          },
+        };
+      }));
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.id, likes: lastItem.likes }
+        : null;
+
+      return {
+        items: normalized,
+        nextCursor,
+      };
+    }),
+
   getMany: baseProcedure
     .input(
       z.object({
@@ -446,7 +540,7 @@ export const videosRouter = createTRPCRouter({
 
       // Generar URL firmada si hay s3Key
       const signedS3Url = video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url;
-      
+
       // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
       let finalThumbnailUrl: string | null = null;
       if (video.thumbnailImage) {

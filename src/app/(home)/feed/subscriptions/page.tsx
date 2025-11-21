@@ -1,12 +1,18 @@
-import { redirect } from "next/navigation";
+import { SubscriptionsView } from "@/modules/feed/ui/views/subscriptions-view";
+import { HydrateClient, prefetch, trpc } from "@/trpc/server";
 
-/**
- * Redirige /feed/subscriptions a /feed con el tab personal activo
- */
-export default function SubscriptionsPage() {
-  redirect("/feed?tab=personal");
-}
+const SubscriptionsPage = async () => {
+  try {
+    await prefetch(trpc.videos.getPersonalFeed.infiniteQueryOptions({ limit: 20 }));
+  } catch (error) {
+    // Ignore prefetch errors (e.g. if not logged in)
+  }
 
+  return (
+    <HydrateClient>
+      <SubscriptionsView />
+    </HydrateClient>
+  );
+};
 
-
-
+export default SubscriptionsPage;

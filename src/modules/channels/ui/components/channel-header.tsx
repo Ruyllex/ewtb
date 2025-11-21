@@ -4,10 +4,10 @@
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 // 🛑 CORREGIDO: Importamos 'api' como 'trpc'
-import { api as trpc } from "@/trpc/client"; 
+import { api as trpc } from "@/trpc/client";
 // 🛑 ELIMINADO: Ya no necesitamos importar useQuery ni useMutation de React Query
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Bell, BellOff, Sparkles } from "lucide-react"; 
+import { Check, Bell, BellOff, Sparkles } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { UploadButton } from "@/lib/uploadthing";
@@ -48,7 +48,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
   // 🛑 CORREGIDO: Uso de trpc.channels.isSubscribed.useQuery
   const { data: isSubscribed, isLoading: isLoadingSubscription } = trpc.channels.isSubscribed.useQuery(
     { channelId: channel.id },
-    { 
+    {
       enabled: isSignedIn && userId !== channel.user.id,
     }
   );
@@ -57,7 +57,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
   const toggleSubscription = trpc.channels.toggleSubscription.useMutation({
     onSuccess: (data) => {
       // Corregido: invalidar queries
-      queryClient.invalidateQueries(); 
+      queryClient.invalidateQueries();
       toast.success(data.subscribed ? "Te has suscrito al canal" : "Te has desuscrito del canal");
     },
     onError: (error) => {
@@ -72,7 +72,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
   return (
     <div className="relative">
       {/* Banner */}
-      <div className="relative h-64 w-full bg-muted group">
+      <div className="relative h-64 w-full bg-white/20 group">
         {bannerUrl && (
           <Image
             src={bannerUrl}
@@ -128,9 +128,9 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
           {/* Avatar */}
           {isOwner ? (
             <div className="relative group">
-              <div className="relative h-32 w-32 rounded-full border-4 border-background overflow-hidden bg-muted">
+              <div className="relative h-32 w-32 rounded-full border-4 border-background overflow-hidden bg-white/20">
                 {isUpdatingAvatar ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-muted z-30">
+                  <div className="absolute inset-0 flex items-center justify-center bg-white/20 z-30">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
                   </div>
                 ) : (
@@ -166,7 +166,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
               </div>
             </div>
           ) : (
-            <div className="relative h-32 w-32 rounded-full border-4 border-background overflow-hidden bg-muted">
+            <div className="relative h-32 w-32 rounded-full border-4 border-background overflow-hidden bg-white/20">
               <Image
                 src={avatarUrl}
                 alt={channel.name}

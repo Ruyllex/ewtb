@@ -86,7 +86,7 @@ export const StarsPurchaseModal = ({ open, onOpenChange, onSuccess }: StarsPurch
               />
             </div>
 
-            <div className="bg-muted p-4 rounded-lg space-y-2">
+            <div className="bg-white/20 p-4 rounded-lg space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Stars a recibir:</span>
                 <span className="text-lg font-bold flex items-center gap-1">
@@ -104,8 +104,8 @@ export const StarsPurchaseModal = ({ open, onOpenChange, onSuccess }: StarsPurch
                 PayPal no está configurado. Por favor, contacta al administrador.
               </div>
             ) : (
-              <Button 
-                onClick={handleCreateOrder} 
+              <Button
+                onClick={handleCreateOrder}
                 disabled={!amount || parseFloat(amount) < 1 || createOrder.isPending}
                 className="w-full"
               >

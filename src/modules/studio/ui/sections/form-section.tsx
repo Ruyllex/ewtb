@@ -155,7 +155,7 @@ export const FormSection: FC<FormSectionProps> = ({ videoId }) => {
                         <FormItem>
                           <FormLabel>Título *</FormLabel>
                           <FormControl>
-                            <Input placeholder="Mi video increíble" {...field} />
+                            <Input placeholder="Mi video increíble" {...field} value={field.value ?? ""} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

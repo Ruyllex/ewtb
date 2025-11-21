@@ -24,21 +24,21 @@ interface MonetizationModalProps {
 type MonetizationType = "tip" | "subscription" | null;
 
 // Componente interno para el formulario de tip que usa PayPal
-function TipPaymentForm({ 
-  videoId, 
-  creatorId, 
-  creatorName, 
-  amount, 
-  message, 
-  orderId, 
-  onSuccess 
-}: { 
-  videoId: string; 
-  creatorId: string; 
-  creatorName: string; 
-  amount: string; 
-  message: string; 
-  orderId: string; 
+function TipPaymentForm({
+  videoId,
+  creatorId,
+  creatorName,
+  amount,
+  message,
+  orderId,
+  onSuccess
+}: {
+  videoId: string;
+  creatorId: string;
+  creatorName: string;
+  amount: string;
+  message: string;
+  orderId: string;
   onSuccess: () => void;
 }) {
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
@@ -81,15 +81,15 @@ function TipPaymentForm({
 }
 
 // Componente interno para el formulario de suscripción que usa PayPal
-function SubscriptionPaymentForm({ 
-  creatorId, 
-  creatorName, 
-  orderId, 
-  onSuccess 
-}: { 
-  creatorId: string; 
-  creatorName: string; 
-  orderId: string; 
+function SubscriptionPaymentForm({
+  creatorId,
+  creatorName,
+  orderId,
+  onSuccess
+}: {
+  creatorId: string;
+  creatorName: string;
+  orderId: string;
   onSuccess: () => void;
 }) {
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || "";
@@ -132,9 +132,9 @@ function SubscriptionPaymentForm({
 }
 
 // Formulario para donar Stars
-function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess }: { 
-  videoId?: string; 
-  creatorId: string; 
+function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess }: {
+  videoId?: string;
+  creatorId: string;
   creatorName: string;
   liveStreamId?: string;
   onSuccess: () => void;
@@ -159,7 +159,7 @@ function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess
 
   const handleDonate = () => {
     const stars = parseInt(starsAmount);
-    
+
     if (!stars || stars < 1) {
       toast.error("Debes donar al menos 1 Star");
       return;
@@ -240,10 +240,10 @@ function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess
           </p>
         </div>
       ) : (
-        <Button 
-          type="button" 
-          onClick={handleDonate} 
-          disabled={!starsAmount || parseInt(starsAmount) < 1 || parseInt(starsAmount) > availableStars || donateStars.isPending} 
+        <Button
+          type="button"
+          onClick={handleDonate}
+          disabled={!starsAmount || parseInt(starsAmount) < 1 || parseInt(starsAmount) > availableStars || donateStars.isPending}
           className="w-full"
         >
           {donateStars.isPending ? (
@@ -264,9 +264,9 @@ function StarsTipForm({ videoId, creatorId, creatorName, liveStreamId, onSuccess
 }
 
 // Formulario inicial para suscripción (crea orden de PayPal)
-function SubscriptionForm({ creatorId, creatorName, onOrderId }: { 
-  creatorId: string; 
-  creatorName: string; 
+function SubscriptionForm({ creatorId, creatorName, onOrderId }: {
+  creatorId: string;
+  creatorName: string;
   onOrderId: (orderId: string) => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -302,16 +302,16 @@ function SubscriptionForm({ creatorId, creatorName, onOrderId }: {
 
   return (
     <div className="space-y-4">
-      <div className="bg-muted p-4 rounded-lg">
+      <div className="bg-white/20 p-4 rounded-lg">
         <p className="text-sm text-muted-foreground">
           Con tu suscripción mensual de <strong>$3</strong>, estarás apoyando directamente a {creatorName} y obtendrás acceso a contenido exclusivo.
         </p>
       </div>
 
-      <Button 
-        type="button" 
-        onClick={handleCreateSubscription} 
-        disabled={isLoading} 
+      <Button
+        type="button"
+        onClick={handleCreateSubscription}
+        disabled={isLoading}
         className="w-full"
       >
         {isLoading ? (
@@ -417,9 +417,9 @@ export const MonetizationModal = ({ videoId, creatorId, creatorName, liveStreamI
         ) : (
           <div>
             {type === "subscription" ? (
-              <SubscriptionForm 
-                creatorId={creatorId} 
-                creatorName={creatorName} 
+              <SubscriptionForm
+                creatorId={creatorId}
+                creatorName={creatorName}
                 onOrderId={handleSubscriptionOrderId}
               />
             ) : null}
