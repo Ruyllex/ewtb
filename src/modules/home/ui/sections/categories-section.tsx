@@ -1,7 +1,7 @@
 "use client";
 import { FilterCarousel } from "@/components/filter-carousel";
 import { useTRPC } from "@/trpc/client";
-import { useSuspenseQuery } from "@tanstack/react-query";
+
 import { useRouter } from "next/navigation";
 import { Suspense } from "react";
 import { ErrorBoundary } from "react-error-boundary";
@@ -21,14 +21,14 @@ export const CategoriesSection = ({ categoryId }: CategoriesSectionProps) => {
 };
 
 const CategoriesSkeleton = () => {
-  return <FilterCarousel isLoading data={[]} onSelect={() => {}} />;
+  return <FilterCarousel isLoading data={[]} onSelect={() => { }} />;
 };
 
 export const CategoriesSectionSuspense = ({ categoryId }: CategoriesSectionProps) => {
   const trpc = useTRPC();
   const router = useRouter();
 
-  const { data } = useSuspenseQuery(trpc.categories.getMany.queryOptions());
+  const [data] = trpc.categories.getMany.useSuspenseQuery();
   const categories = data.map((category) => ({
     value: category.id,
     label: category.name,

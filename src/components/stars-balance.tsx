@@ -43,13 +43,13 @@ export const StarsBalance = () => {
           <>
             <Sparkles className="h-4 w-4" />
             <span className="font-semibold">{stars.toLocaleString()}</span>
-            <span className="text-xs opacity-70">Stars</span>
+            <span className="text-xs opacity-70 hidden md:inline">Stars</span>
           </>
         )}
       </Button>
 
-      <StarsPurchaseModal 
-        open={showPurchaseModal} 
+      <StarsPurchaseModal
+        open={showPurchaseModal}
         onOpenChange={setShowPurchaseModal}
         onSuccess={() => {
           refetch();

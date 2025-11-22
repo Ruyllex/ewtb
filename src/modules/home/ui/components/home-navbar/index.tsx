@@ -44,7 +44,9 @@ export const HomeNavbar = () => {
           <Link href={"/"}>
             <div className="flex items-center gap-2 p-4">
               <Image src={"/logo.png"} alt={"Logo"} width={40} height={40} priority />
-              <p className="text-xl font-semibold tracking-tight text-white hidden xl:block">FacuGo! Plus</p>
+              <p className="text-lg font-semibold tracking-tight text-white hidden min-[380px]:block md:hidden xl:block xl:text-xl">
+                FacuGo! Plus
+              </p>
             </div>
           </Link>
         </div>

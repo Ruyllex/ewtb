@@ -22,8 +22,28 @@ export const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-
-
 export const snakeCaseToTitleCase = (str: string) => {
   return str.replace(/_/g, " ").replace(/\b\w/g, (match) => match.toUpperCase());
 };
+
+export function normalizeImage(src?: string | null) {
+  if (!src) return null;
+  try {
+    const u = new URL(src);
+    if (u.protocol === "http:" || u.protocol === "https:") return src;
+  } catch {
+    // no es URL absoluta
+  }
+  // UploadThing key heuristic
+  const keyRegex = /^[A-Za-z0-9_\-]{8,}$/;
+  if (keyRegex.test(src)) return `https://utfs.io/f/${src}`;
+
+  // utfs or clerk without protocol
+  if ((src.includes("utfs.io") || src.includes("img.clerk.com")) && !src.startsWith("http")) {
+    return `https://${src.replace(/^\/+/, "")}`;
+  }
+  // Relative URL (starts with /)
+  if (src.startsWith("/")) return src;
+
+  return null;
+}

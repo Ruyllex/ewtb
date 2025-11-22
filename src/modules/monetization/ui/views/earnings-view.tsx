@@ -603,9 +603,9 @@ export const EarningsView = () => {
               <div className="space-y-4">
                 {earnings.transactions.map((transaction) => (
                   <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4 flex-1">
+                    <div className="flex items-center gap-4 flex-1 min-w-0">
                       {transaction.video && (
-                        <div className="relative w-16 h-9 rounded overflow-hidden bg-white/20">
+                        <div className="relative w-16 h-9 rounded overflow-hidden bg-white/20 shrink-0">
                           {transaction.video.thumbnailUrl && (
                             <Image
                               src={transaction.video.thumbnailUrl}
@@ -616,9 +616,9 @@ export const EarningsView = () => {
                           )}
                         </div>
                       )}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium">{transaction.description || "Transacción"}</p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-medium truncate">{transaction.description || "Transacción"}</p>
                           <Badge variant={transaction.type === "stars_tip" || transaction.type === "tip" ? "default" : "secondary"}>
                             {transaction.type === "stars_tip" ? (
                               <span className="flex items-center gap-1">

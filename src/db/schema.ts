@@ -222,7 +222,7 @@ export const liveStreams = pgTable("live_streams", {
   ivsStreamKey: text("ivs_stream_key").unique(), // Stream key de IVS (Deprecado)
   ivsPlaybackUrl: text("ivs_playback_url"), // URL de reproducción del stream (Deprecado)
   ivsIngestEndpoint: text("ivs_ingest_endpoint"), // Endpoint RTMP para ingest (Deprecado)
-  
+
   // Campos de Livepeer
   livepeerId: text("livepeer_id").unique(), // ID del stream en Livepeer
   livepeerStreamKey: text("livepeer_stream_key"), // Stream key de Livepeer
@@ -568,5 +568,79 @@ export const notificationRelations = relations(notifications, ({ one }) => ({
   relatedTransaction: one(transactions, {
     fields: [notifications.relatedTransactionId],
     references: [transactions.id],
+  }),
+}));
+
+// --- MEMBERSHIPS SYSTEM ---
+
+// Niveles de membresía (Definidos por el admin - Precios fijos)
+export const membershipTiers = pgTable("membership_tiers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  level: integer("level").notNull().unique(), // 1, 2, 3
+  name: text("name").notNull(), // Nombre por defecto (ej: Nivel 1)
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(), // Precio fijo establecido por admin
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Ofertas de membresía por canal (Configuradas por el creador)
+export const channelMembershipOffers = pgTable(
+  "channel_membership_offers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(), // El creador
+    level: integer("level").notNull(), // 1, 2, 3 (debe coincidir con membershipTiers.level)
+    benefits: text("benefits").array(), // Lista de beneficios
+    imageUrl: text("image_url"), // Badge/Imagen personalizada
+    imageKey: text("image_key"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("user_level_idx").on(t.userId, t.level), // Un creador solo puede tener una oferta por nivel
+  ]
+);
+
+export const channelMembershipOfferRelations = relations(channelMembershipOffers, ({ one }) => ({
+  user: one(users, {
+    fields: [channelMembershipOffers.userId],
+    references: [users.id],
+  }),
+}));
+
+// Membresías activas (Suscripciones de usuarios a canales)
+export const memberships = pgTable(
+  "memberships",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(), // Suscriptor
+    channelId: uuid("channel_id")
+      .references(() => users.id, { onDelete: "cascade" })
+      .notNull(), // Creador
+    level: integer("level").notNull(), // Nivel adquirido
+    status: text("status").default("active").notNull(), // active, expired, cancelled
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("user_channel_membership_idx").on(t.userId, t.channelId), // Un usuario solo puede tener una membresía activa por canal (se asume upgrade/downgrade reemplaza)
+  ]
+);
+
+export const membershipRelations = relations(memberships, ({ one }) => ({
+  user: one(users, {
+    fields: [memberships.userId],
+    references: [users.id],
+    relationName: "membershipSubscriber",
+  }),
+  channel: one(users, {
+    fields: [memberships.channelId],
+    references: [users.id],
+    relationName: "membershipChannel",
   }),
 }));

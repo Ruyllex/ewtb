@@ -100,3 +100,4 @@ export const VideoThumbnail = ({ imageUrl, previewUrl, videoUrl, title, duration
     </div>
   );
 };
+

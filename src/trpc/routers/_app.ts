@@ -1,4 +1,4 @@
-import { categoriesRouter } from "@/modules/categories/server/procedores";
+import { categoriesRouter } from "@/modules/categories/server/procedures";
 import { studioRouter } from "@/modules/studio/server/procedures";
 import { liveRouter } from "@/modules/live/server/procedures";
 import { videosRouter } from "@/modules/videos/server/procedures";
