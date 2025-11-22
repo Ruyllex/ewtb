@@ -101,12 +101,6 @@ export const FeedView = () => {
   if (!isMounted) {
     return (
       <div className="max-w-[2400px] mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Feed</h1>
-          <p className="text-muted-foreground">
-            Descubre videos de tus canales favoritos y explora contenido nuevo
-          </p>
-        </div>
         <div className="inline-flex h-10 items-center justify-center rounded-md bg-transparent border border-white/20 p-1 text-white/70">
           <div className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium text-white/70">
             Feed Global
@@ -125,13 +119,6 @@ export const FeedView = () => {
 
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Feed</h1>
-        <p className="text-muted-foreground">
-          Descubre videos de tus canales favoritos y explora contenido nuevo
-        </p>
-      </div>
-
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "personal" | "global")}>
         <TabsList>
           {isSignedIn && (

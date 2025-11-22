@@ -22,14 +22,9 @@ export const HomeView = async ({ categoryId }: HomeViewProps) => {
 
   return (
     <div className="max-w-[2400px] mx-auto mb-10 px-4 pt-2.5 flex flex-col gap-y-6">
-      {/* Botón de prueba de PayPal */}
-      <div className="flex justify-center">
-        <PayPalTestButton />
-      </div>
       <CategoriesSection categoryId={categoryId} />
       {!categoryId && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">En Vivo</h2>
           <LiveStreamsView publicFeed />
         </div>
       )}

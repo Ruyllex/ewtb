@@ -61,12 +61,12 @@ const PublicLiveStreamViewSuspense = ({ streamId }: PublicLiveStreamViewProps) =
   const isActive = stream.status === "active";
 
   return (
-    <div className="max-w-[2400px] mx-auto px-4 py-6">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">
+    <div className="max-w-[2400px] mx-auto px-4 pt-4 lg:pt-6">
+      <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 lg:h-[calc(100vh-100px)]">
         {/* Columna principal: Video e Info */}
-        <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-y-auto">
+        <div className="lg:col-span-3 flex flex-col gap-4 h-full lg:overflow-y-auto scroll-hidden pb-10">
           {/* Reproductor de video */}
-          <div className="aspect-video bg-black rounded-lg overflow-hidden shrink-0">
+          <div className="aspect-video bg-black rounded-xl overflow-hidden shrink-0 shadow-2xl border border-white/5">
             {stream.playbackUrl && isActive ? (
               <VideoPlayer
                 playbackId={stream.playbackUrl}
@@ -128,7 +128,7 @@ const PublicLiveStreamViewSuspense = ({ streamId }: PublicLiveStreamViewProps) =
         </div>
 
         {/* Columna lateral: Chat */}
-        <div className="lg:col-span-1 h-full">
+        <div className="lg:col-span-1 h-[500px] lg:h-full pb-6 lg:pb-0">
           <ChatComponent streamId={streamId} />
         </div>
       </div>
