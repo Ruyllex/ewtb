@@ -277,4 +277,3 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
     </div>
   );
 };
-};
