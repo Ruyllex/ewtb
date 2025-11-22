@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { THUMBNAIL_FALLBACK } from "../../constants";
 import styles from "./video-player.module.css";
-import * as Player from "@livepeer/react/player";
 
 interface VideoPlayerProps {
   playbackId?: string | null | undefined; // Para VOD: s3Url, para Live: livepeerPlaybackId
@@ -40,25 +39,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // Para Live streams, usar Livepeer Player
+  // Para streams en vivo, usar Livepeer Web Player (iframe) para máxima compatibilidad
   if (isLive) {
     return (
-      <div className={`${styles.shell} aspect-video overflow-hidden rounded-lg`}>
-         <Player.Root
-            src={[{ type: 'hls', src: `https://livepeercdn.com/hls/${playbackId}/index.m3u8`, mime: 'application/x-mpegURL' } as any]}
-            autoPlay={autoPlay}
-            aspectRatio={16/9}
-         >
-            <Player.Container>
-               <Player.Video title="Live stream" className="h-full w-full object-cover" />
-               <Player.Controls />
-            </Player.Container>
-         </Player.Root>
+      <div className={`${styles.shell} aspect-video relative overflow-hidden rounded-xl bg-black`}>
+        <iframe
+          src={`https://lvpr.tv?v=${playbackId}&autoplay=${autoPlay ? "true" : "false"}&muted=${autoPlay ? "true" : "false"}`} // Autoplay requiere mute a veces
+          allowFullScreen
+          allow="autoplay; encrypted-media; picture-in-picture"
+          className="w-full h-full border-0 absolute inset-0"
+          title="Live Stream"
+        />
       </div>
     );
   }
 
-  // Para VOD (videos on demand), usar video tag HTML5 estándar (por ahora)
+  // Para VOD (videos on demand), usar video tag HTML5 estándar
   return (
     <div className={`${styles.shell} aspect-video`}>
       <video
