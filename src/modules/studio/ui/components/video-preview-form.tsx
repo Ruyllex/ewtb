@@ -242,7 +242,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
                   }}
                   className={`relative w-full sm:w-80 aspect-video rounded-lg overflow-hidden border-2 border-dashed transition-all duration-200 group ${videoId
                     ? "border-muted-foreground/30 hover:border-primary bg-white/20 hover:bg-white/20 cursor-pointer"
-                    : "border-muted-foreground/20 bg-white/20 opacity-60 cursor-not-allowed"
+                    : "border-muted-foreground/20 bg-white/20 opacity-60 cursor-not-allowed "
                     }`}
                   disabled={!videoId}
                   title={
