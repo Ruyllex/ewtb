@@ -13,12 +13,13 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { TrendingUp, VideoIcon, UsersIcon, ClockIcon, EyeIcon } from "lucide-react";
+import { THUMBNAIL_FALLBACK } from "@/modules/videos/constants";
 
 import { api } from "@/trpc/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, normalizeImage } from "@/lib/utils";
 
 const numberFormatter = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 });
 
@@ -106,8 +107,8 @@ export const AnalyticsView = () => {
         ))}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
-        <Card className="border border-border/60 bg-card/80">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2 border border-border/60 bg-card/80">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-xl">
               <TrendingUp className="size-5 text-primary" />
@@ -180,13 +181,12 @@ export const AnalyticsView = () => {
                 <div key={video.id} className="flex items-center justify-between gap-4 rounded-xl border border-border/60 p-3">
                   <div className="flex items-center gap-3">
                     <div className="relative h-16 w-28 overflow-hidden rounded-lg bg-white/20">
-                      {video.thumbnailUrl ? (
-                        <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                          Sin miniatura
-                        </div>
-                      )}
+                      <Image
+                        src={normalizeImage(video.thumbnailUrl) || THUMBNAIL_FALLBACK}
+                        alt={video.title}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
                     <div>
                       <p className="font-medium text-foreground line-clamp-1">{video.title}</p>

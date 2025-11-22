@@ -13,6 +13,7 @@ interface HomeViewProps {
 export const HomeView = async ({ categoryId }: HomeViewProps) => {
   // Prefetch videos for the home page con manejo de errores
   try {
+    await prefetch(trpc.categories.getMany.queryOptions());
     await prefetch(trpc.videos.getMany.infiniteQueryOptions({ categoryId, limit: 20 }));
   } catch (error) {
     // Si el prefetch falla, simplemente continuamos sin pre-cargar los datos
