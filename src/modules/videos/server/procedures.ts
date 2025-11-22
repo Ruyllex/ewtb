@@ -985,4 +985,23 @@ export const videosRouter = createTRPCRouter({
         nextCursor,
       };
     }),
+
+  /**
+   * Obtener el conteo de vistas de un video específico
+   */
+  getViewCount: baseProcedure
+    .input(z.object({ videoId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      try {
+        const viewCountResult = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(views)
+          .where(eq(views.videoId, input.videoId));
+
+        return { count: viewCountResult[0]?.count ?? 0 };
+      } catch (error) {
+        console.warn("Error getting view count:", error);
+        return { count: 0 };
+      }
+    }),
 });

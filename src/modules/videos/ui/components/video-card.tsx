@@ -6,8 +6,9 @@ import { useState } from "react";
 import { TimeAgo } from "@/components/time-ago";
 import { VideoThumbnail } from "./video-thumbnail";
 import { THUMBNAIL_FALLBACK } from "../../constants";
-import { Eye, Heart } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { LikeSection } from "@/modules/likes/ui/components/like-section";
+import { ViewSection } from "./view-section";
 
 interface ChannelLite {
   username?: string | null;
@@ -147,14 +148,8 @@ export const VideoCard = ({
           ) : null}
 
           <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-            <div className="flex items-center gap-1">
-              <Eye className="w-4 h-4" />
-              <span>{formatNumber(viewCount)}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Heart className="w-4 h-4" />
-              <span>{formatNumber(likes)}</span>
-            </div>
+            <ViewSection videoId={id} />
+            <LikeSection videoId={id} variant="thumbsUp" />
             <TimeAgo date={createdAt} />
           </div>
         </div>

@@ -17,6 +17,7 @@ import { useAuth } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { CommentsSection } from "@/modules/comments/ui/components/comments-section";
 import { VideoCard } from "../components/video-card";
+import { ViewCounter } from "../components/view-counter";
 
 interface VideoViewProps {
   videoId: string;
@@ -139,7 +140,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                 <h1 className="text-2xl font-bold leading-tight text-white">{video.title}</h1>
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-white/70">
-                    <span>{video.viewCount} views</span>
+                    <ViewCounter videoId={videoId} /> views
                     <span className="text-base">•</span>
                     <TimeAgo date={video.createdAt} />
                   </div>
