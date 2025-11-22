@@ -50,7 +50,7 @@ npm run dev
 
 Una vez configurado, el usuario `carlamorrison1947@gmail.com` podrá:
 
-1. **Verificar canales:**
+1. **Verificar canales:**.
    ```typescript
    trpc.channels.verifyChannel.mutate({ channelId: "canal-id" });
    ```

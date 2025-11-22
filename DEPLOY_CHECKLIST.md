@@ -12,7 +12,7 @@ Este checklist te ayudará a asegurar que todo esté listo antes de hacer el dep
 - [ ] No hay archivos `.env.local` o `.env` en el repositorio (verifica `.gitignore`)
 - [ ] El build local funciona correctamente: `npm run build`
 - [ ] No hay errores de linting: `npm run lint`
-- [ ] Los tests pasan (si los tienes)
+- [ ] Los tests pasan (si los tienes)  
 
 ### 🔐 Variables de Entorno
 - [ ] Tienes todas las claves de **producción** (no de desarrollo/test)
