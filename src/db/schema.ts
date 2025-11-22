@@ -218,10 +218,17 @@ export const liveStreams = pgTable("live_streams", {
   id: uuid("id").primaryKey().defaultRandom(),
   title: text("title").notNull(),
   description: text("description"),
-  ivsChannelArn: text("ivs_channel_arn").unique(), // ARN del canal IVS
-  ivsStreamKey: text("ivs_stream_key").unique().notNull(), // Stream key de IVS
-  ivsPlaybackUrl: text("ivs_playback_url"), // URL de reproducción del stream
-  ivsIngestEndpoint: text("ivs_ingest_endpoint"), // Endpoint RTMP para ingest
+  ivsChannelArn: text("ivs_channel_arn").unique(), // ARN del canal IVS (Deprecado)
+  ivsStreamKey: text("ivs_stream_key").unique(), // Stream key de IVS (Deprecado)
+  ivsPlaybackUrl: text("ivs_playback_url"), // URL de reproducción del stream (Deprecado)
+  ivsIngestEndpoint: text("ivs_ingest_endpoint"), // Endpoint RTMP para ingest (Deprecado)
+  
+  // Campos de Livepeer
+  livepeerId: text("livepeer_id").unique(), // ID del stream en Livepeer
+  livepeerStreamKey: text("livepeer_stream_key"), // Stream key de Livepeer
+  livepeerPlaybackId: text("livepeer_playback_id"), // Playback ID de Livepeer
+  livepeerIngestUrl: text("livepeer_ingest_url"), // URL de ingest RTMP de Livepeer
+
   status: text("status").default("idle").notNull(), // idle, active, disconnected
   userId: uuid("user_id")
     .references(() => users.id, { onDelete: "cascade" })

@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useAuth, useClerk } from "@clerk/nextjs";
-import { FlameIcon, HomeIcon, PlaySquareIcon } from "lucide-react";
+import { FlameIcon, HomeIcon, PlaySquareIcon, RadioIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,11 @@ const items = [
     title: "Home",
     url: "/",
     icon: HomeIcon,
+  },
+  {
+    title: "Live",
+    url: "/feed/live",
+    icon: RadioIcon,
   },
   {
     title: "Subscriptions",

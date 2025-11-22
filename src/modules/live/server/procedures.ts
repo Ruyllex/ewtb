@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { liveStreams, subscriptions, channels, users } from "@/db/schema";
-import { ensureAwsCredentials, createIVSChannel, deleteIVSChannel, getIVSChannel } from "@/lib/aws";
+import { livepeer } from "@/lib/livepeer";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
@@ -18,130 +18,37 @@ export const liveRouter = createTRPCRouter({
       const { id: userId } = ctx.user;
 
       try {
-        ensureAwsCredentials();
-
-        // Crear canal IVS para transmisión en vivo
-        const channelName = `${input.title}-${Date.now()}`;
-        const ivsChannel = await createIVSChannel(channelName);
-
-        if (!ivsChannel.streamKey || !ivsChannel.playbackUrl || !ivsChannel.ingestEndpoint) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to create IVS channel. Missing stream key, playback URL, or ingest endpoint.",
-          });
-        }
-
-        // Guardar en BD - manejar errores si la tabla no existe
-        try {
-          const [savedStream] = await db
-            .insert(liveStreams)
-            .values({
-              userId,
-              title: input.title,
-              description: input.description || null,
-              ivsChannelArn: ivsChannel.channelArn || null,
-              ivsStreamKey: ivsChannel.streamKey,
-              ivsPlaybackUrl: ivsChannel.playbackUrl,
-              ivsIngestEndpoint: ivsChannel.ingestEndpoint,
-              status: "idle",
-            })
-            .returning();
-
-          return savedStream;
-        } catch (dbError: any) {
-          // Si la tabla no existe, lanzar error más claro
-          if (dbError?.message?.includes("does not exist") || dbError?.code === "42P01") {
-            throw new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "La tabla live_streams no existe. Ejecuta: npm run drizzle:push",
-            });
-          }
-          throw dbError;
-        }
-      } catch (error: any) {
-        // Logging con Logtail si está configurado, sino console
-        const { logServer } = await import("@/lib/logtail");
-        logServer.error("Failed to create live stream", error instanceof Error ? error : new Error(String(error)), {
-          message: error?.message,
-          status: error?.$metadata?.httpStatusCode,
-          data: error?.$metadata,
-          hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
-          hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY,
-          hasBucket: !!process.env.AWS_S3_BUCKET_NAME,
-          userId,
+        const stream = await livepeer.stream.create({
+          name: input.title,
         });
-        
-        // Verificar si las credenciales están presentes
-        if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+
+        if (!stream.stream?.id || !stream.stream?.streamKey || !stream.stream?.playbackId) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "AWS credentials are missing. Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in your .env.local file.",
+            message: "Failed to create Livepeer stream",
           });
         }
 
-        // Manejar errores específicos de AWS IVS
-        const status = error?.$metadata?.httpStatusCode;
-        const errorMessage = error?.message || "Unknown error";
-        const errorCode = error?.name || error?.code;
-        const requestId = error?.$metadata?.requestId;
+        const [savedStream] = await db
+          .insert(liveStreams)
+          .values({
+            userId,
+            title: input.title,
+            description: input.description || null,
+            livepeerId: stream.stream.id,
+            livepeerStreamKey: stream.stream.streamKey,
+            livepeerPlaybackId: stream.stream.playbackId,
+            livepeerIngestUrl: "rtmp://rtmp.livepeer.com/live", // Default Livepeer ingest URL
+            status: "idle",
+          })
+          .returning();
 
-        // Detectar errores específicos de autenticación/autorización
-        if (status === 401 || status === 403 || errorCode === "UnrecognizedClientException" || errorCode === "InvalidSignatureException" || errorCode === "AccessDeniedException") {
-          let detailedMessage = "Credenciales de AWS inválidas o sin permisos para IVS.\n\n";
-          
-          // Verificar si las credenciales están presentes
-          const hasAccessKey = !!process.env.AWS_ACCESS_KEY_ID;
-          const hasSecretKey = !!process.env.AWS_SECRET_ACCESS_KEY;
-          const region = process.env.AWS_REGION || "us-east-1";
-          
-          if (!hasAccessKey || !hasSecretKey) {
-            detailedMessage += "❌ Las credenciales no están configuradas en las variables de entorno.\n";
-            detailedMessage += "   Asegúrate de tener AWS_ACCESS_KEY_ID y AWS_SECRET_ACCESS_KEY en tu .env.local\n\n";
-          } else {
-            detailedMessage += "✅ Las credenciales están configuradas, pero pueden ser incorrectas o no tener permisos.\n\n";
-          }
-          
-          detailedMessage += "Pasos para resolver:\n";
-          detailedMessage += "1. Verifica que tus credenciales AWS sean correctas en .env.local\n";
-          detailedMessage += "2. Asegúrate de que el usuario IAM tenga estos permisos:\n";
-          detailedMessage += "   - ivs:CreateChannel\n";
-          detailedMessage += "   - ivs:DeleteChannel\n";
-          detailedMessage += "   - ivs:GetChannel\n";
-          detailedMessage += "   - ivs:ListChannels\n";
-          detailedMessage += "   - ivs:GetStreamKey\n";
-          detailedMessage += "3. Verifica que AWS IVS esté habilitado en tu cuenta AWS\n";
-          detailedMessage += `4. Asegúrate de que la región "${region}" sea compatible con IVS\n\n`;
-          detailedMessage += "Regiones compatibles con IVS: us-east-1, us-west-2, eu-west-1, ap-southeast-1, ap-northeast-1";
-
-          if (requestId) {
-            detailedMessage += `\n\nRequest ID: ${requestId}`;
-          }
-
-          throw new TRPCError({
-            code: "UNAUTHORIZED",
-            message: detailedMessage,
-          });
-        }
-
-        if (status === 429) {
-          throw new TRPCError({
-            code: "TOO_MANY_REQUESTS",
-            message: "Rate limit exceeded. Please wait a moment and try again.",
-          });
-        }
-
-        // Si el error tiene un mensaje específico, usarlo
-        if (errorMessage && errorMessage !== "Unknown error") {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: `Failed to create live stream: ${errorMessage}`,
-          });
-        }
-
-        // Error genérico como último recurso
+        return savedStream;
+      } catch (error: any) {
+        console.error("Failed to create live stream", error);
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: `Unable to create live stream. ${status ? `Status: ${status}. ` : ""}Check your AWS credentials, account status, and that IVS is enabled in your AWS account.`,
+          message: "Failed to create live stream",
         });
       }
     }),
@@ -208,17 +115,21 @@ export const liveRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       const { id: userId } = ctx.user;
 
-      const [stream] = await db
+      const [result] = await db
         .select()
         .from(liveStreams)
+        .innerJoin(users, eq(liveStreams.userId, users.id))
         .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
         .limit(1);
 
-      if (!stream) {
+      if (!result) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
-      return stream;
+      return {
+        ...result.live_streams,
+        user: result.users,
+      };
     }),
 
   delete: protectedProcedure
@@ -237,15 +148,23 @@ export const liveRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
-      // Eliminar canal IVS si existe
-      if (stream.ivsChannelArn) {
+      // Eliminar stream de Livepeer si existe
+      if (stream.livepeerId) {
         try {
-          ensureAwsCredentials();
-          await deleteIVSChannel(stream.ivsChannelArn);
+          await livepeer.stream.delete(stream.livepeerId);
         } catch (error) {
-          console.error("Failed to delete IVS channel", error);
-          // Continuar con la eliminación en BD aunque falle en IVS
+          console.error("Failed to delete Livepeer stream", error);
+          // Continuar con la eliminación en BD aunque falle en Livepeer
         }
+      } else if (stream.ivsChannelArn) {
+         // Fallback para streams antiguos de IVS
+         try {
+            const { ensureAwsCredentials, deleteIVSChannel } = await import("@/lib/aws");
+            ensureAwsCredentials();
+            await deleteIVSChannel(stream.ivsChannelArn);
+         } catch (error) {
+            console.error("Failed to delete IVS channel", error);
+         }
       }
 
       // Eliminar de BD
@@ -265,22 +184,51 @@ export const liveRouter = createTRPCRouter({
         .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
         .limit(1);
 
-      if (!stream || !stream.ivsChannelArn) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
+      if (!stream.livepeerId) {
+          // Fallback para streams antiguos de IVS
+          if (stream.ivsChannelArn) {
+             try {
+                const { ensureAwsCredentials, getIVSChannel } = await import("@/lib/aws");
+                ensureAwsCredentials();
+                const ivsChannel = await getIVSChannel(stream.ivsChannelArn);
+                let status = "idle";
+                if (ivsChannel.health === "Streaming") {
+                  status = "active";
+                } else if (ivsChannel.health === "Connected") {
+                  status = "connected";
+                }
+                 await db
+                  .update(liveStreams)
+                  .set({
+                    status,
+                    updatedAt: new Date(),
+                  })
+                  .where(eq(liveStreams.id, input.id));
+
+                return {
+                  status,
+                  streamKey: stream.ivsStreamKey,
+                  playbackUrl: stream.ivsPlaybackUrl,
+                  ingestUrl: stream.ivsIngestEndpoint,
+                };
+             } catch (error) {
+                 console.error("Failed to get IVS status", error);
+                 throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to get stream status" });
+             }
+          }
+          throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
       try {
-        ensureAwsCredentials();
-        const ivsChannel = await getIVSChannel(stream.ivsChannelArn);
+        const result = await livepeer.stream.get(stream.livepeerId);
+        const livepeerStream = result.stream;
 
-        // Mapear el estado de IVS al estado interno
-        // IVS tiene: "Idle", "Connected", "Streaming"
-        let status = "idle";
-        if (ivsChannel.health === "Streaming") {
-          status = "active";
-        } else if (ivsChannel.health === "Connected") {
-          status = "connected";
+        if (!livepeerStream) {
+             throw new TRPCError({ code: "NOT_FOUND", message: "Stream not found in Livepeer" });
         }
+
+        const isActive = livepeerStream.isActive;
+        const status = isActive ? "active" : "idle";
 
         // Actualizar estado en BD
         await db
@@ -293,8 +241,9 @@ export const liveRouter = createTRPCRouter({
 
         return {
           status,
-          streamKey: stream.ivsStreamKey,
-          playbackUrl: stream.ivsPlaybackUrl,
+          streamKey: stream.livepeerStreamKey,
+          playbackUrl: stream.livepeerPlaybackId, // Note: This is just the ID, not the full URL usually, but we'll handle it in frontend or here
+          ingestUrl: "rtmp://rtmp.livepeer.com/live",
         };
       } catch (error) {
         console.error("Failed to get live stream status", error);
@@ -303,6 +252,38 @@ export const liveRouter = createTRPCRouter({
           message: "Unable to get live stream status",
         });
       }
+    }),
+
+  /**
+   * Obtener un stream público individual
+   */
+  getPublicStream: baseProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input }) => {
+      const [result] = await db
+        .select({
+          id: liveStreams.id,
+          title: liveStreams.title,
+          description: liveStreams.description,
+          playbackUrl: liveStreams.livepeerPlaybackId,
+          ivsPlaybackUrl: liveStreams.ivsPlaybackUrl,
+          status: liveStreams.status,
+          createdAt: liveStreams.createdAt,
+          userId: users.id,
+          userName: users.name,
+          userUsername: users.username,
+          userImageUrl: users.imageUrl,
+        })
+        .from(liveStreams)
+        .innerJoin(users, eq(liveStreams.userId, users.id))
+        .where(eq(liveStreams.id, input.id))
+        .limit(1);
+
+      if (!result) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Stream not found" });
+      }
+
+      return result;
     }),
 
   /**
@@ -335,7 +316,8 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackUrl: liveStreams.ivsPlaybackUrl,
+          playbackUrl: liveStreams.livepeerPlaybackId, // Prefer Livepeer
+          ivsPlaybackUrl: liveStreams.ivsPlaybackUrl, // Fallback
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
           userId: users.id,
@@ -419,7 +401,8 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackUrl: liveStreams.ivsPlaybackUrl,
+          playbackUrl: liveStreams.livepeerPlaybackId, // Prefer Livepeer
+          ivsPlaybackUrl: liveStreams.ivsPlaybackUrl, // Fallback
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
           userId: users.id,

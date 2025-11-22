@@ -101,7 +101,8 @@ async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<
   if (clerkUserId) {
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkUserId);
       if (clerkUser?.emailAddresses?.[0]?.emailAddress) {
         const userEmail = clerkUser.emailAddresses[0].emailAddress;
         if (adminUserIds.includes(userEmail)) {

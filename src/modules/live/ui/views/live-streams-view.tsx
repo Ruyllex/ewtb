@@ -24,7 +24,11 @@ const LiveStreamsSkeleton = () => {
   );
 };
 
-export const LiveStreamsView = () => {
+interface LiveStreamsViewProps {
+  publicFeed?: boolean;
+}
+
+export const LiveStreamsView = ({ publicFeed = false }: LiveStreamsViewProps) => {
   return (
     <ErrorBoundary
       fallback={
@@ -45,17 +49,21 @@ export const LiveStreamsView = () => {
       }
     >
       <Suspense fallback={<LiveStreamsSkeleton />}>
-        <LiveStreamsViewSuspense />
+        <LiveStreamsViewSuspense publicFeed={publicFeed} />
       </Suspense>
     </ErrorBoundary>
   );
 };
 
-const LiveStreamsViewSuspense = () => {
+const LiveStreamsViewSuspense = ({ publicFeed }: LiveStreamsViewProps) => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Usar useInfiniteQuery en lugar de useSuspenseInfiniteQuery para mejor manejo de errores
+  const query = publicFeed 
+    ? trpc.live.getPublicStreams.useInfiniteQuery({ limit: 20 }, { getNextPageParam: (lastPage) => lastPage?.nextCursor, retry: false })
+    : trpc.live.getMany.useInfiniteQuery({ limit: 20 }, { getNextPageParam: (lastPage) => lastPage?.nextCursor, retry: false });
+
   const {
     data,
     hasNextPage,
@@ -63,15 +71,7 @@ const LiveStreamsViewSuspense = () => {
     fetchNextPage,
     isLoading,
     error,
-  } = trpc.live.getMany.useInfiniteQuery(
-    { limit: 20 },
-    {
-      getNextPageParam(lastPage) {
-        return lastPage?.nextCursor;
-      },
-      retry: false, // No reintentar si falla
-    }
-  );
+  } = query;
 
   // Si hay error, mostrar mensaje
   if (error) {
@@ -80,12 +80,16 @@ const LiveStreamsViewSuspense = () => {
         <div className="px-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Transmisiones en Vivo</h1>
-            <p className="text-xs text-muted-foreground">Gestiona tus transmisiones en vivo</p>
+            <p className="text-xs text-muted-foreground">
+              {publicFeed ? "Explora transmisiones en vivo" : "Gestiona tus transmisiones en vivo"}
+            </p>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)}>
-            <PlusIcon className="size-4 mr-2" />
-            Nueva Transmisión
-          </Button>
+          {!publicFeed && (
+            <Button onClick={() => setIsCreateModalOpen(true)}>
+              <PlusIcon className="size-4 mr-2" />
+              Nueva Transmisión
+            </Button>
+          )}
         </div>
         <div className="px-4 text-center py-12 border rounded-lg">
           <VideoIcon className="size-12 mx-auto mb-4 text-muted-foreground opacity-50" />
@@ -121,6 +125,7 @@ const LiveStreamsViewSuspense = () => {
   const streams = data.pages.flatMap((page) => page.items);
 
   const handleCopyStreamKey = async (streamKey: string) => {
+    if (!streamKey) return;
     await navigator.clipboard.writeText(streamKey);
     setCopiedId(streamKey);
     setTimeout(() => setCopiedId(null), 2000);
@@ -132,26 +137,34 @@ const LiveStreamsViewSuspense = () => {
       <div className="px-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Transmisiones en Vivo</h1>
-          <p className="text-xs text-muted-foreground">Gestiona tus transmisiones en vivo</p>
+          <p className="text-xs text-muted-foreground">
+            {publicFeed ? "Explora transmisiones en vivo" : "Gestiona tus transmisiones en vivo"}
+          </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <PlusIcon className="size-4 mr-2" />
-          Nueva Transmisión
-        </Button>
+        {!publicFeed && (
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <PlusIcon className="size-4 mr-2" />
+            Nueva Transmisión
+          </Button>
+        )}
       </div>
 
       <div className="px-4">
         {streams.length === 0 ? (
           <div className="text-center py-12 border rounded-lg">
             <VideoIcon className="size-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">No tienes transmisiones en vivo</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              {publicFeed ? "No hay transmisiones en vivo" : "No tienes transmisiones en vivo"}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Crea una nueva transmisión para comenzar
+              {publicFeed ? "Vuelve más tarde para ver contenido en vivo" : "Crea una nueva transmisión para comenzar"}
             </p>
-            <Button onClick={() => setIsCreateModalOpen(true)}>
-              <PlusIcon className="size-4 mr-2" />
-              Crear Transmisión
-            </Button>
+            {!publicFeed && (
+              <Button onClick={() => setIsCreateModalOpen(true)}>
+                <PlusIcon className="size-4 mr-2" />
+                Crear Transmisión
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -184,22 +197,24 @@ const LiveStreamsViewSuspense = () => {
                 </div>
 
                 <div className="flex gap-2 pt-2">
-                  <Link href={`/studio/live/${stream.id}`} className="flex-1">
-                    <Button variant="outline" className="w-full" size="sm">
-                      Ver Stream
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleCopyStreamKey(stream.streamKey)}
-                  >
-                    {copiedId === stream.streamKey ? (
-                      <CopyCheckIcon className="size-4" />
-                    ) : (
-                      <CopyIcon className="size-4" />
+                    <Link href={publicFeed ? `/live/${stream.id}` : `/studio/live/${stream.id}`} className="flex-1">
+                      <Button variant="outline" className="w-full" size="sm">
+                        Ver Stream
+                      </Button>
+                    </Link>
+                    {!publicFeed && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleCopyStreamKey(stream.livepeerStreamKey || stream.ivsStreamKey || "")}
+                      >
+                        {copiedId === (stream.livepeerStreamKey || stream.ivsStreamKey) ? (
+                          <CopyCheckIcon className="size-4" />
+                        ) : (
+                          <CopyIcon className="size-4" />
+                        )}
+                      </Button>
                     )}
-                  </Button>
                 </div>
               </div>
             ))}

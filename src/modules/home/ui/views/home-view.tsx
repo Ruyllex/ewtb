@@ -1,6 +1,7 @@
 import { PayPalTestButton } from "@/components/paypal-test-button";
 import { CategoriesSection } from "../sections/categories-section";
 import { VideosGridSection } from "@/modules/videos/ui/sections/videos-grid-section";
+import { LiveStreamsView } from "@/modules/live/ui/views/live-streams-view";
 import { prefetch, trpc } from "@/trpc/server";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,12 @@ export const HomeView = async ({ categoryId }: HomeViewProps) => {
         <PayPalTestButton />
       </div>
       <CategoriesSection categoryId={categoryId} />
+      {!categoryId && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">En Vivo</h2>
+          <LiveStreamsView publicFeed />
+        </div>
+      )}
       <VideosGridSection categoryId={categoryId} />
     </div>
   );
