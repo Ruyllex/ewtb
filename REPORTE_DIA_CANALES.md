@@ -10,7 +10,6 @@
 - ✅ Funcionalidad de suscripción operativa
 - ✅ Videos y streams activos listados correctamente
 - ✅ Canales verificados visibles con check azul
-
 ---
 
 ## 🗄️ Base de Datos
