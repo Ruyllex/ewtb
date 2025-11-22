@@ -16,8 +16,8 @@ export const StudioNavbar = () => {
 
           <Link href={"/studio"}>
             <div className="flex items-center gap-2 p-4">
-              <Image src={"/logo.svg"} alt={"Logo"} width={40} height={40} priority />
-              <p className="text-xl font-semibold tracking-tight text-white">FacuGo! Plus</p>
+              <Image src={"/logo.png"} alt={"Logo"} width={40} height={40} priority />
+              <p className="text-xl font-semibold tracking-tight text-white hidden md:block">FacuGo! Plus</p>
             </div>
           </Link>
         </div>

@@ -56,8 +56,8 @@ export const VideosSection = () => {
     <div className="space-y-4">
       <h2 className="text-2xl font-bold">Tus Videos</h2>
 
-      <div className="border rounded-lg overflow-hidden">
-        <Table>
+      <div className="border rounded-lg overflow-hidden overflow-x-auto">
+        <Table className="min-w-[800px]">
           <TableHeader>
             <TableRow>
               <TableHead className="w-[300px]">Video</TableHead>

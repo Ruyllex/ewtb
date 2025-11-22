@@ -448,14 +448,14 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-6 border-t gap-4">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-between pt-6 border-t gap-4">
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={finalize.isPending}
               size="lg"
-              className="px-8"
+              className="w-full sm:w-auto px-8"
             >
               <XIcon className="size-4 mr-2" />
               Cancelar
@@ -464,7 +464,7 @@ export const VideoPreviewForm = ({ uploadId, onCancel, duration = 0 }: VideoPrev
               type="submit"
               disabled={!uploadStatus.ready || finalize.isPending || !title.trim()}
               size="lg"
-              className="px-8 min-w-[140px]"
+              className="w-full sm:w-auto px-8 min-w-[140px]"
             >
               {finalize.isPending ? (
                 <>

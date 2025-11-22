@@ -4,7 +4,11 @@ import { SearchIcon, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, FormEvent } from "react";
 
-export const SearchInput = () => {
+interface SearchInputProps {
+  autoFocus?: boolean;
+}
+
+export const SearchInput = ({ autoFocus }: SearchInputProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
@@ -26,6 +30,7 @@ export const SearchInput = () => {
       <div className="relative w-full">
         <input
           type="text"
+          autoFocus={autoFocus}
           placeholder="Search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}

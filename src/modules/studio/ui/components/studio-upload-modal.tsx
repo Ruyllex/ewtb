@@ -114,15 +114,15 @@ export const StudioUploadModal = () => {
       <Button
         variant={"secondary"}
         onClick={() => setStep("uploading")}
-        className="cursor-pointer gap-2"
+        className="cursor-pointer size-9 p-0 rounded-md bg-white/10 hover:bg-white/20 border border-white/10"
         disabled={create.isPending || isOpen}
+        title="Subir video"
       >
         {create.isPending ? (
-          <Loader2Icon className="animate-spin size-4" />
+          <Loader2Icon className="animate-spin size-5 text-white" />
         ) : (
-          <PlusIcon className="size-4" />
+          <PlusIcon className="size-5 text-white" />
         )}
-        Subir Video
       </Button>
     </>
   );

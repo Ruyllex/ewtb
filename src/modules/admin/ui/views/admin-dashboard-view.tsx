@@ -155,7 +155,7 @@ export const AdminDashboardView = () => {
 
   return (
     <div className="max-w-[2400px] mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="relative">
             <ShieldCheckIcon className="h-8 w-8 text-[#5ADBFD]" />
@@ -194,9 +194,10 @@ export const AdminDashboardView = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="channels">Canales</TabsTrigger>
-          <TabsTrigger value="monetization" className="relative">
+        <div className="w-full overflow-x-auto pb-2">
+          <TabsList className="w-full min-w-[600px] grid grid-cols-3">
+            <TabsTrigger value="channels">Canales</TabsTrigger>
+            <TabsTrigger value="monetization" className="relative">
             Solicitudes de Monetización
             {pendingMonetizationCount > 0 && (
               <span className="ml-2 h-5 w-5 bg-red-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
@@ -213,6 +214,7 @@ export const AdminDashboardView = () => {
             )}
           </TabsTrigger>
         </TabsList>
+        </div>
 
         <TabsContent value="channels" className="mt-6">
 
