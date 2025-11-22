@@ -215,6 +215,10 @@ export const studioRouter = createTRPCRouter({
           id: videos.id,
           title: videos.title,
           thumbnailUrl: videos.thumbnailUrl,
+          thumbnailKey: videos.thumbnailKey,
+          thumbnailImage: videos.thumbnailImage,
+          s3Key: videos.s3Key,
+          s3Url: videos.s3Url,
           duration: videos.duration,
           createdAt: videos.createdAt,
           viewCount: sql<number>`COALESCE(count(${views.id}), 0)::int`,
@@ -308,16 +312,28 @@ export const studioRouter = createTRPCRouter({
           : 0
         : ((lastSeven - previousSeven) / previousSeven) * 100;
 
-      const topVideos = [...videoStats]
+      const topVideos = await Promise.all([...videoStats]
         .sort((a, b) => (b.viewCount ?? 0) - (a.viewCount ?? 0))
         .slice(0, 5)
-        .map((video) => ({
-          id: video.id,
-          title: video.title,
-          thumbnailUrl: video.thumbnailUrl,
-          views: video.viewCount ?? 0,
-          likes: video.likeCount ?? 0,
-          createdAt: video.createdAt,
+        .map(async (video) => {
+          // Normalizar thumbnail URL: prioridad a thumbnailImage (ruta API), luego thumbnailKey (URL firmada), luego thumbnailUrl
+          let finalThumbnailUrl: string | null = null;
+          if (video.thumbnailImage) {
+            finalThumbnailUrl = `/api/videos/${video.id}/thumbnail`;
+          } else if (video.thumbnailKey) {
+            finalThumbnailUrl = await getSignedDownloadUrl(video.thumbnailKey);
+          } else {
+            finalThumbnailUrl = video.thumbnailUrl;
+          }
+
+          return {
+            id: video.id,
+            title: video.title,
+            thumbnailUrl: finalThumbnailUrl,
+            views: video.viewCount ?? 0,
+            likes: video.likeCount ?? 0,
+            createdAt: video.createdAt,
+          };
         }));
 
       return {

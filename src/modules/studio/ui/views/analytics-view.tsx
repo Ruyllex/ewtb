@@ -189,15 +189,15 @@ export const AnalyticsView = () => {
                       />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground line-clamp-1">{video.title}</p>
+                      <p className="font-medium text-foreground line-clamp-1 max-w-[150px] sm:max-w-[200px] md:max-w-[140px] lg:max-w-[180px] xl:max-w-[240px]">{video.title}</p>
                       <p className="text-xs text-muted-foreground">
                         {new Date(video.createdAt).toLocaleDateString()} · {numberFormatter.format(video.likes)} likes
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-center">
                     <p className="text-lg font-semibold">{numberFormatter.format(video.views)}</p>
-                    <p className="text-xs text-muted-foreground">visualizaciones</p>
+                    <p className="text-xs text-muted-foreground">vistas</p>
                   </div>
                 </div>
               ))}
