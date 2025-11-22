@@ -429,5 +429,199 @@ export const liveRouter = createTRPCRouter({
         nextCursor,
       };
     }),
+
+  /**
+   * Join a live stream (track viewer)
+   */
+  joinStream: baseProcedure
+    .input(z.object({ 
+      streamId: z.string().uuid(),
+      sessionId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Get userId if authenticated
+      let userId: string | null = null;
+      if (ctx.clerkUserId) {
+        const [user] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.clerkId, ctx.clerkUserId))
+          .limit(1);
+        userId = user?.id || null;
+      }
+
+      // Note: This will fail until liveStreamViewers table is added to schema
+      // Uncomment after adding the table to schema.ts
+      /*
+      // Insert or update viewer record
+      await db
+        .insert(liveStreamViewers)
+        .values({
+          streamId: input.streamId,
+          userId,
+          sessionId: input.sessionId,
+          joinedAt: new Date(),
+          lastHeartbeat: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [liveStreamViewers.streamId, liveStreamViewers.sessionId],
+          set: {
+            lastHeartbeat: new Date(),
+          },
+        });
+
+      // Clean up stale viewers (no heartbeat in last 30 seconds)
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      await db
+        .delete(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} < ${thirtySecondsAgo}`
+          )
+        );
+
+      // Get current viewer count
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} >= ${thirtySecondsAgo}`
+          )
+        );
+
+      return { viewerCount: result?.count ?? 0 };
+      */
+
+      // Temporary return until table is added
+      return { viewerCount: 0 };
+    }),
+
+  /**
+   * Leave a live stream (remove viewer)
+   */
+  leaveStream: baseProcedure
+    .input(z.object({ 
+      streamId: z.string().uuid(),
+      sessionId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Note: This will fail until liveStreamViewers table is added to schema
+      // Uncomment after adding the table to schema.ts
+      /*
+      await db
+        .delete(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            eq(liveStreamViewers.sessionId, input.sessionId)
+          )
+        );
+
+      // Clean up stale viewers
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      await db
+        .delete(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} < ${thirtySecondsAgo}`
+          )
+        );
+
+      // Get updated viewer count
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} >= ${thirtySecondsAgo}`
+          )
+        );
+
+      return { viewerCount: result?.count ?? 0 };
+      */
+
+      // Temporary return until table is added
+      return { viewerCount: 0 };
+    }),
+
+  /**
+   * Send heartbeat to keep viewer session alive
+   */
+  heartbeat: baseProcedure
+    .input(z.object({ 
+      streamId: z.string().uuid(),
+      sessionId: z.string(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Note: This will fail until liveStreamViewers table is added to schema
+      // Uncomment after adding the table to schema.ts
+      /*
+      await db
+        .update(liveStreamViewers)
+        .set({ lastHeartbeat: new Date() })
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            eq(liveStreamViewers.sessionId, input.sessionId)
+          )
+        );
+
+      // Clean up stale viewers
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      await db
+        .delete(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} < ${thirtySecondsAgo}`
+          )
+        );
+      */
+
+      return { success: true };
+    }),
+
+  /**
+   * Get current viewer count for a stream
+   */
+  getViewerCount: baseProcedure
+    .input(z.object({ streamId: z.string().uuid() }))
+    .query(async ({ input }) => {
+      // Note: This will fail until liveStreamViewers table is added to schema
+      // Uncomment after adding the table to schema.ts
+      /*
+      const thirtySecondsAgo = new Date(Date.now() - 30000);
+      
+      // Clean up stale viewers first
+      await db
+        .delete(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} < ${thirtySecondsAgo}`
+          )
+        );
+
+      const [result] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(liveStreamViewers)
+        .where(
+          and(
+            eq(liveStreamViewers.streamId, input.streamId),
+            sql`${liveStreamViewers.lastHeartbeat} >= ${thirtySecondsAgo}`
+          )
+        );
+
+      return { viewerCount: result?.count ?? 0 };
+      */
+
+      // Temporary return until table is added
+      return { viewerCount: 0 };
+    }),
 });
 

@@ -119,9 +119,12 @@ const PublicLiveStreamViewSuspense = ({ streamId }: PublicLiveStreamViewProps) =
                   )}
                 </div>
               </div>
-              <div className={`rounded-full px-3 py-1 text-xs font-medium flex items-center gap-2 shrink-0 ${isActive ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
-                <div className={`size-2 rounded-full ${isActive ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
-                {isActive ? "EN VIVO" : "OFFLINE"}
+              <div className="flex items-center gap-2">
+                <div className={`rounded-full px-3 py-1 text-xs font-medium flex items-center gap-2 shrink-0 ${isActive ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"}`}>
+                  <div className={`size-2 rounded-full ${isActive ? "bg-red-500 animate-pulse" : "bg-gray-400"}`} />
+                  {isActive ? "EN VIVO" : "OFFLINE"}
+                </div>
+                {isActive && <ViewerCount streamId={streamId} />}
               </div>
             </div>
           </div>
@@ -132,6 +135,25 @@ const PublicLiveStreamViewSuspense = ({ streamId }: PublicLiveStreamViewProps) =
           <ChatComponent streamId={streamId} />
         </div>
       </div>
+    </div>
+  );
+};
+
+// Viewer count component
+const ViewerCount = ({ streamId }: { streamId: string }) => {
+  const { data } = trpc.live.getViewerCount.useQuery(
+    { streamId },
+    {
+      refetchInterval: 5000, // Poll every 5 seconds
+    }
+  );
+
+  if (!data || data.viewerCount === 0) return null;
+
+  return (
+    <div className="rounded-full px-3 py-1 text-xs font-medium flex items-center gap-1.5 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400">
+      <UserIcon className="size-3" />
+      <span>{data.viewerCount.toLocaleString()}</span>
     </div>
   );
 };

@@ -12,38 +12,48 @@ export const likesRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
 
-      // Verificar si ya existe
-      const existing = await db
-        .select()
-        .from(videoLikes)
-        .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, userId)))
-        .limit(1);
+      try {
+        // Check if like exists
+        const existing = await db
+          .select()
+          .from(videoLikes)
+          .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, userId)))
+          .limit(1);
 
-      if (existing.length > 0) {
-        // Eliminar like
-        await db
-          .delete(videoLikes)
-          .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, userId)));
+        if (existing.length > 0) {
+          // Remove like
+          await db
+            .delete(videoLikes)
+            .where(and(eq(videoLikes.videoId, input.videoId), eq(videoLikes.userId, userId)));
 
-        await db
-          .update(videos)
-          .set({ likes: sql<number>`GREATEST(${videos.likes} - 1, 0)` })
-          .where(eq(videos.id, input.videoId));
+          // Decrement like count
+          await db
+            .update(videos)
+            .set({ likes: sql<number>`GREATEST(${videos.likes} - 1, 0)` })
+            .where(eq(videos.id, input.videoId));
 
-        return { liked: false };
-      } else {
-        // Insertar like
-        await db.insert(videoLikes).values({
-          videoId: input.videoId,
-          userId,
+          return { liked: false };
+        } else {
+          // Add like
+          await db.insert(videoLikes).values({
+            videoId: input.videoId,
+            userId,
+          });
+
+          // Increment like count
+          await db
+            .update(videos)
+            .set({ likes: sql<number>`${videos.likes} + 1` })
+            .where(eq(videos.id, input.videoId));
+
+          return { liked: true };
+        }
+      } catch (error) {
+        console.error("Error toggling like:", error);
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to toggle like",
         });
-
-        await db
-          .update(videos)
-          .set({ likes: sql<number>`GREATEST(${videos.likes} + 1, 0)` })
-          .where(eq(videos.id, input.videoId));
-
-        return { liked: true };
       }
     }),
 
