@@ -45,7 +45,7 @@ export const MainSection = () => {
           {items.map((item) => {
             const isActive = pathname === item.url;
             return (
-              <SidebarMenuItem className="" key={item.title}>
+              <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
                   tooltip={item.title}
                   asChild
@@ -56,19 +56,21 @@ export const MainSection = () => {
                       return clerk.openSignIn({ redirectUrl: item.url });
                     }
                   }}
+                  className={cn(
+                    "h-10 px-3 rounded-xl transition-all duration-200",
+                    isActive 
+                      ? "bg-primary/15 text-primary hover:bg-primary/20 hover:text-primary" 
+                      : "text-white hover:bg-white/10 hover:text-white"
+                  )}
                 >
-                  <Link
-                    href={item.url}
-                    className={cn(
-                      "flex items-center gap-4",
-                      isActive ? "text-primary" : "text-white"
-                    )}
-                    prefetch
-                  >
+                  <Link href={item.url} prefetch className="flex items-center gap-4 font-medium">
                     <item.icon
-                      className={cn(isActive ? "text-primary" : "text-white")}
+                      className={cn(
+                        "size-5",
+                        isActive ? "fill-current" : ""
+                      )}
                     />
-                    <span className="text-sm">{item.title}</span>
+                    <span>{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

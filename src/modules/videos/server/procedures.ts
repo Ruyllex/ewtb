@@ -701,6 +701,126 @@ export const videosRouter = createTRPCRouter({
       };
     }),
 
+  getHistory: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z
+          .object({
+            id: z.string().uuid(),
+            viewedAt: z.date(),
+          })
+          .optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+      const { limit, cursor } = input;
+
+      const whereConditions = [
+        eq(views.userId, userId),
+        cursor
+          ? sql`(${views.createdAt} < ${cursor.viewedAt} OR (${views.createdAt} = ${cursor.viewedAt} AND ${views.id} < ${cursor.id}))`
+          : undefined,
+      ].filter(Boolean);
+
+      const viewerHistory = await db
+        .select({
+          viewId: views.id,
+          viewedAt: views.createdAt,
+          video: {
+            id: videos.id,
+            title: videos.title,
+            description: videos.description,
+            thumbnailUrl: videos.thumbnailUrl,
+            thumbnailKey: videos.thumbnailKey,
+            thumbnailImage: videos.thumbnailImage,
+            previewUrl: videos.previewUrl,
+            s3Url: videos.s3Url,
+            s3Key: videos.s3Key,
+            duration: videos.duration,
+            createdAt: videos.createdAt,
+            likes: videos.likes,
+            userId: users.id,
+            userName: users.name,
+            userUsername: users.username,
+            userImageUrl: users.imageUrl,
+            channelName: channels.name,
+            channelAvatar: channels.avatar,
+          },
+        })
+        .from(views)
+        .innerJoin(videos, eq(views.videoId, videos.id))
+        .innerJoin(users, eq(videos.userId, users.id))
+        .leftJoin(channels, eq(channels.userId, users.id))
+        .where(and(...whereConditions))
+        .orderBy(desc(views.createdAt), desc(views.id))
+        .limit(limit + 1);
+
+      const hasMore = viewerHistory.length > limit;
+      const items = hasMore ? viewerHistory.slice(0, -1) : viewerHistory;
+
+      // Calculate view counts for the videos
+      const videoIds = items.map(item => item.video.id);
+      const viewCountsMap = new Map<string, number>();
+
+      if (videoIds.length > 0) {
+        try {
+          const viewCounts = await db
+            .select({
+              videoId: views.videoId,
+              count: sql<number>`count(*)::int`
+            })
+            .from(views)
+            .where(inArray(views.videoId, videoIds))
+            .groupBy(views.videoId);
+
+          viewCounts.forEach(vc => viewCountsMap.set(vc.videoId, vc.count));
+        } catch (error) {
+          console.warn('[getHistory] Error fetching view counts:', error);
+        }
+      }
+
+      const normalized = await Promise.all(items.map(async (item) => {
+        const video = item.video;
+        
+        let finalThumbnailUrl: string | null = null;
+        if (video.thumbnailImage) {
+          finalThumbnailUrl = `/api/videos/${video.id}/thumbnail`;
+        } else if (video.thumbnailKey) {
+          finalThumbnailUrl = await getSignedDownloadUrl(video.thumbnailKey);
+        } else {
+          finalThumbnailUrl = video.thumbnailUrl;
+        }
+
+        const { thumbnailImage, ...videoWithoutThumbnailImage } = video;
+
+        return {
+          ...videoWithoutThumbnailImage,
+          s3Url: video.s3Key ? await getSignedDownloadUrl(video.s3Key) : video.s3Url,
+          thumbnailUrl: finalThumbnailUrl,
+          viewCount: viewCountsMap.get(video.id) ?? 0,
+          viewedAt: item.viewedAt, // Importante para el historial
+          viewId: item.viewId,
+          channel: {
+            username: video.userUsername ?? null,
+            name: video.channelName ?? null,
+            avatarUrl: normalizeAvatar(video.channelAvatar ?? null, video.userImageUrl ?? null),
+          },
+        };
+      }));
+
+      const lastItem = items[items.length - 1];
+      const nextCursor = hasMore && lastItem
+        ? { id: lastItem.viewId, viewedAt: lastItem.viewedAt }
+        : null;
+
+      return {
+        items: normalized,
+        nextCursor,
+      };
+    }),
+
   recordView: baseProcedure
     .input(z.object({ videoId: z.string().uuid() }))
     .mutation(async ({ input, ctx }) => {
