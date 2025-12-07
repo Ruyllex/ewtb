@@ -9,39 +9,69 @@ import z from "zod";
  * Verificar si un usuario es admin
  * Primero verifica la columna isAdmin en la base de datos, luego la variable de entorno
  */
+/**
+ * Verificar si un usuario es admin
+ * Primero verifica la columna isAdmin en la base de datos, luego la variable de entorno
+ */
 async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<boolean> {
   // Primero verificar la columna isAdmin en la base de datos
-  const [user] = await db.select({ isAdmin: users.isAdmin }).from(users).where(eq(users.id, userId)).limit(1);
+  const [user] = await db
+    .select({ isAdmin: users.isAdmin, clerkId: users.clerkId })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
   
-  if (user?.isAdmin) {
+  // Si el usuario tiene isAdmin = true en la BD, retornar true inmediatamente
+  if (user?.isAdmin === true) {
+    console.log(`[isUserAdmin] Usuario ${userId} es admin según BD (isAdmin=true)`);
     return true;
   }
 
   // Si no está marcado como admin en la BD, verificar variable de entorno (retrocompatibilidad)
-  const adminUserIds = process.env.ADMIN_USER_IDS?.split(",").map((id) => id.trim()) || [];
+  // Limpiar espacios y filtrar valores vacíos
+  const adminUserIds = process.env.ADMIN_USER_IDS
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0) || [];
   
-  // Verificar por ID de usuario o Clerk ID
-  const isAdmin = 
-    adminUserIds.includes(userId) || 
-    (clerkUserId && adminUserIds.includes(clerkUserId));
+  if (adminUserIds.length === 0) {
+    console.log(`[isUserAdmin] No hay ADMIN_USER_IDS configurados`);
+    return false;
+  }
+
+  // Verificar por ID de usuario (UUID de la BD)
+  if (adminUserIds.includes(userId)) {
+    console.log(`[isUserAdmin] Usuario ${userId} encontrado en ADMIN_USER_IDS por UUID`);
+    return true;
+  }
+
+  // Verificar por Clerk ID
+  if (clerkUserId && adminUserIds.includes(clerkUserId)) {
+    console.log(`[isUserAdmin] Usuario ${clerkUserId} encontrado en ADMIN_USER_IDS por Clerk ID`);
+    return true;
+  }
 
   // Si no se encontró por ID, verificar por email (si está en la lista)
-  if (!isAdmin && clerkUserId) {
+  if (clerkUserId) {
     try {
       const { clerkClient } = await import("@clerk/nextjs/server");
-      const clerkUser = await clerkClient.users.getUser(clerkUserId);
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(clerkUserId);
       if (clerkUser?.emailAddresses?.[0]?.emailAddress) {
         const userEmail = clerkUser.emailAddresses[0].emailAddress;
         if (adminUserIds.includes(userEmail)) {
+          console.log(`[isUserAdmin] Usuario ${userEmail} encontrado en ADMIN_USER_IDS por email`);
           return true;
         }
       }
-    } catch {
+    } catch (error) {
+      console.error(`[isUserAdmin] Error obteniendo email de Clerk:`, error);
       // Si no se puede obtener el email, continuar sin él
     }
   }
 
-  return isAdmin;
+  console.log(`[isUserAdmin] Usuario ${userId} (Clerk: ${clerkUserId}) NO es admin`);
+  return false;
 }
 
 export const channelsRouter = createTRPCRouter({
@@ -498,7 +528,14 @@ getVideos: baseProcedure
       }
 
       const streams = await db
-        .select()
+        .select({
+          id: liveStreams.id,
+          title: liveStreams.title,
+          description: liveStreams.description,
+          playbackUrl: liveStreams.muxPlaybackId,
+          status: liveStreams.status,
+          createdAt: liveStreams.createdAt,
+        })
         .from(liveStreams)
         .where(and(eq(liveStreams.userId, user.id), eq(liveStreams.status, "active")))
         .orderBy(desc(liveStreams.createdAt));
@@ -591,6 +628,54 @@ getVideos: baseProcedure
     }),
 
   /**
+   * Alternar estado de monetización de un usuario (solo admin)
+   */
+  toggleMonetization: protectedProcedure
+    .input(z.object({ channelId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Verificar si el usuario es admin
+      const isAdmin = await isUserAdmin(userId, ctx.clerkUserId || null);
+
+      if (!isAdmin) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Solo los administradores pueden cambiar el estado de monetización",
+        });
+      }
+
+      // Obtener el canal y el usuario asociado
+      const [channel] = await db
+        .select({
+            userId: channels.userId,
+            userCanMonetize: users.canMonetize
+        })
+        .from(channels)
+        .innerJoin(users, eq(channels.userId, users.id))
+        .where(eq(channels.id, input.channelId))
+        .limit(1);
+
+      if (!channel) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Canal no encontrado" });
+      }
+
+      // Alternar estado
+      const newStatus = !channel.userCanMonetize;
+
+      // Actualizar usuario
+      await db
+        .update(users)
+        .set({
+          canMonetize: newStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, channel.userId));
+
+      return { canMonetize: newStatus };
+    }),
+
+  /**
    * Obtiene todos los canales (solo admin) - Para dashboard administrativo
    */
   getAll: protectedProcedure
@@ -624,6 +709,8 @@ getVideos: baseProcedure
           : undefined,
       ].filter(Boolean);
 
+      console.log(`[getAll] Querying channels... Limit: ${input.limit}`);
+
       const results = await db
         .select({
           id: channels.id,
@@ -638,6 +725,7 @@ getVideos: baseProcedure
           userName: users.name,
           userUsername: users.username,
           userImageUrl: users.imageUrl,
+          userCanMonetize: users.canMonetize,
         })
         .from(channels)
         .innerJoin(users, eq(channels.userId, users.id))
@@ -647,6 +735,8 @@ getVideos: baseProcedure
 
       const hasMore = results.length > input.limit;
       const items = hasMore ? results.slice(0, -1) : results;
+      
+      console.log(`[getAll] Found ${results.length} raw results. returning ${items.length} items.`);
 
       const lastItem = items[items.length - 1];
       const nextCursor = hasMore && lastItem

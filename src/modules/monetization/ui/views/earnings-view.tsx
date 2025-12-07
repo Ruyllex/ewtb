@@ -1,6 +1,8 @@
 "use client";
 
+
 import { useState, useEffect } from "react";
+import { Progress } from "@/components/ui/progress";
 import { api as trpc } from "@/trpc/client";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -198,33 +200,47 @@ export const EarningsView = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {connectStatus.monetizationCheck?.reasons && connectStatus.monetizationCheck.reasons.length > 0 && (
+              <div className="space-y-6">
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <p className="text-sm font-medium">Requisitos pendientes:</p>
-                    <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                      {connectStatus.monetizationCheck.reasons.map((reason, index) => (
-                        <li key={index}>{reason}</li>
-                      ))}
-                    </ul>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Suscriptores</span>
+                      <span className="text-muted-foreground">{connectStatus.requirements?.subscribers || 0} / {connectStatus.requirements?.minSubscribers || 500}</span>
+                    </div>
+                    <Progress value={Math.min(100, ((connectStatus.requirements?.subscribers || 0) / (connectStatus.requirements?.minSubscribers || 500)) * 100)} />
                   </div>
-                )}
-                <Button
-                  onClick={() => verifyMonetization.mutate()}
-                  disabled={verifyMonetization.isPending}
-                >
-                  {verifyMonetization.isPending ? (
-                    <>
-                      <Loader2Icon className="size-4 mr-2 animate-spin" />
-                      Verificando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircleIcon className="size-4 mr-2" />
-                      Verificar monetización
-                    </>
-                  )}
-                </Button>
+                  
+                  <div className="space-y-2">
+                     <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium">Videos (últimos 90 días)</span>
+                      <span className="text-muted-foreground">{connectStatus.requirements?.videos || 0} / {connectStatus.requirements?.minVideos || 3}</span>
+                    </div>
+                    <Progress value={Math.min(100, ((connectStatus.requirements?.videos || 0) / (connectStatus.requirements?.minVideos || 3)) * 100)} />
+                  </div>
+                </div>
+
+                <div className="space-y-4 pt-2">
+                    <p className="text-sm text-muted-foreground">
+                        Una vez cumplas los requisitos, podrás solicitar unirte al programa de monetización.
+                    </p>
+                    <Button
+                    onClick={() => verifyMonetization.mutate()}
+                    disabled={verifyMonetization.isPending || (connectStatus.monetizationCheck?.reasons && connectStatus.monetizationCheck.reasons.length > 0)}
+                    className="w-full"
+                    >
+                    {verifyMonetization.isPending ? (
+                        <>
+                        <Loader2Icon className="size-4 mr-2 animate-spin" />
+                        Verificando...
+                        </>
+                    ) : (
+                        <>
+                        <CheckCircleIcon className="size-4 mr-2" />
+                        Aplicar ahora
+                        </>
+                    )}
+                    </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

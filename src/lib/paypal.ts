@@ -92,6 +92,8 @@ export async function createPayPalOrder(orderData: {
   currency?: string;
   description?: string;
   customId?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
 }): Promise<{ id: string; links: Array<{ href: string; rel: string }> }> {
   const accessToken = await getPayPalAccessToken();
   const baseUrl = getPayPalBaseUrl();
@@ -115,6 +117,12 @@ export async function createPayPalOrder(orderData: {
           custom_id: orderData.customId,
         },
       ],
+      application_context: {
+        return_url: orderData.returnUrl,
+        cancel_url: orderData.cancelUrl,
+        brand_name: "EWTB Clone",
+        user_action: "PAY_NOW",
+      },
     }),
   });
 
@@ -124,5 +132,26 @@ export async function createPayPalOrder(orderData: {
   }
 
   return await response.json();
+}
+
+// Capturar una orden de PayPal aprobada
+export async function capturePayPalOrder(orderId: string): Promise<any> {
+    const accessToken = await getPayPalAccessToken();
+    const baseUrl = getPayPalBaseUrl();
+  
+    const response = await fetch(`${baseUrl}/v2/checkout/orders/${orderId}/capture`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${accessToken}`,
+      },
+    });
+  
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error capturando orden de PayPal: ${errorText}`);
+    }
+  
+    return await response.json();
 }
 

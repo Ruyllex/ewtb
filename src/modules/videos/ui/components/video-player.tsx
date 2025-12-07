@@ -4,13 +4,19 @@ import { useEffect, useRef } from "react";
 import { THUMBNAIL_FALLBACK } from "../../constants";
 import styles from "./video-player.module.css";
 
+import MuxPlayer from "@mux/mux-player-react";
+import { AdPlayerOverlay } from "./ad-player-overlay";
+import { api } from "@/trpc/client";
+import { useState } from "react";
+
 interface VideoPlayerProps {
-  playbackId?: string | null | undefined; // Para VOD: s3Url, para Live: livepeerPlaybackId
+  playbackId?: string | null | undefined; // Para VOD: s3Url, para Live: muxPlaybackId
   thumbnailUrl?: string | null | undefined;
   autoPlay?: boolean;
   onPlay?: () => void;
   onLoadedMetadata?: (duration: number) => void;
   streamType?: "on-demand" | "live" | "ll-live"; // Tipo de stream: VOD o en vivo
+  adsEnabled?: boolean;
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -20,9 +26,21 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onPlay,
   onLoadedMetadata,
   streamType = "on-demand", // Por defecto es VOD
+  adsEnabled = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const isLive = streamType === "live" || streamType === "ll-live";
+  const [adCompleted, setAdCompleted] = useState(false);
+
+  // Fetch random ad if ads are enabled and not completed yet
+  // We use enabled: false if adCompleted is true to stop fetching
+  const { data: adData } = api.ads.getRandom.useQuery(undefined, {
+    enabled: adsEnabled && !adCompleted,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const showAd = adsEnabled && !adCompleted && !!adData;
 
   // Si no hay playbackId, mostrar un placeholder
   if (!playbackId) {
@@ -39,41 +57,47 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // Para streams en vivo, usar Livepeer Web Player (iframe) para máxima compatibilidad
-  if (isLive) {
+  // Placeholder VAST Tag for testing ads
+  const VAST_TAG_URL = "https://pubads.g.doubleclick.net/gampad/ads?iu=/21775744923/external/single_ad_samples&sz=640x480&cust_params=sample_ct%3Dlinear&ciu_szs=300x250%2C728x90&gdfp_req=1&output=vast&unviewed_position_start=1&env=vp&impl=s&correlator=";
+
+  // Determine source type
+  const isUrl = playbackId?.startsWith("http");
+  
+  if (showAd && adData) {
     return (
-      <div className={`${styles.shell} aspect-video relative overflow-hidden rounded-xl bg-black`}>
-        <iframe
-          src={`https://lvpr.tv?v=${playbackId}&autoplay=${autoPlay ? "true" : "false"}&muted=${autoPlay ? "true" : "false"}`} // Autoplay requiere mute a veces
-          allowFullScreen
-          allow="autoplay; encrypted-media; picture-in-picture"
-          className="w-full h-full border-0 absolute inset-0"
-          title="Live Stream"
+      <div className={`${styles.shell} aspect-video bg-black relative`}>
+        <AdPlayerOverlay 
+          adUrl={adData.videoUrl} 
+          onComplete={() => setAdCompleted(true)} 
         />
+        {/* Preload main video if possible or keep query logic simple */}
       </div>
     );
   }
-
-  // Para VOD (videos on demand), usar video tag HTML5 estándar
+  
   return (
-    <div className={`${styles.shell} aspect-video`}>
-      <video
-        ref={videoRef}
-        src={playbackId || undefined}
-        poster={thumbnailUrl || THUMBNAIL_FALLBACK}
-        controls
-        className={styles.player}
+    <div className={`${styles.shell} aspect-video relative overflow-hidden rounded-xl bg-black`}>
+      <MuxPlayer
+        playbackId={!isUrl ? playbackId : undefined}
+        src={isUrl ? playbackId : undefined}
+        streamType={streamType === "live" ? "live" : "on-demand"}
         autoPlay={autoPlay}
-        preload="metadata"
+        muted={autoPlay}
+        className="w-full h-full"
+        accentColor="#FF0000"
         onPlay={onPlay}
-        onLoadedMetadata={(e) => {
-          const duration = e.currentTarget.duration;
-          if (duration && !isNaN(duration) && duration !== Infinity) {
-            onLoadedMetadata?.(Math.floor(duration * 1000));
-          }
-        }}
-        onError={(error) => {
-          console.warn("Video player error:", error);
+        onLoadedMetadata={onLoadedMetadata ? (e: any) => {
+             // MuxPlayer logic for metadata might differ, but basic event works
+             const duration = e.target.duration;
+             if (duration && !isNaN(duration) && duration !== Infinity) {
+                onLoadedMetadata(Math.floor(duration * 1000));
+              }
+        } : undefined}
+        // Enable Ads
+        // @ts-ignore - MuxPlayer types might be slightly outdated in the project or using different version
+        advertising={{
+            tagUrl: VAST_TAG_URL,
+            skipOffset: 5, // Allow skip after 5s
         }}
       />
     </div>

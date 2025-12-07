@@ -14,6 +14,7 @@ import { UploadButton } from "@/lib/uploadthing";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MonetizationModal } from "@/modules/monetization/ui/components/monetization-modal";
+import { JoinChannelModal } from "./join-channel-modal";
 
 interface ChannelHeaderProps {
   channel: {
@@ -44,6 +45,7 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
   const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const [isUpdatingBanner, setIsUpdatingBanner] = useState(false);
   const [monetizationOpen, setMonetizationOpen] = useState(false);
+  const [joinModalOpen, setJoinModalOpen] = useState(false);
 
   // 🛑 CORREGIDO: Uso de trpc.channels.isSubscribed.useQuery
   const { data: isSubscribed, isLoading: isLoadingSubscription } = trpc.channels.isSubscribed.useQuery(
@@ -220,6 +222,15 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
                     </>
                   )}
                 </Button>
+                
+                <Button 
+                    variant="secondary"
+                    className="border border-input bg-background hover:bg-accent hover:text-accent-foreground"
+                    onClick={() => setJoinModalOpen(true)}
+                >
+                    Unirme
+                </Button>
+
                 {channel.user.canMonetize && (
                   <Button
                     variant="outline"
@@ -248,6 +259,14 @@ export const ChannelHeader = ({ channel, isSignedIn }: ChannelHeaderProps) => {
           onOpenChange={setMonetizationOpen}
         />
       )}
+
+      <JoinChannelModal 
+         open={joinModalOpen}
+         onOpenChange={setJoinModalOpen}
+         channelId={channel.user.id}
+         channelName={channel.name}
+         channelAvatar={avatarUrl}
+      />
     </div>
   );
 };

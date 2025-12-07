@@ -177,10 +177,9 @@ const LiveStreamsViewSuspense = ({ publicFeed }: LiveStreamsViewProps) => {
                 description={stream.description}
                 thumbnailUrl={null} // Live streams don't have a static thumbnail yet
                 previewUrl={null}
-                videoUrl={stream.playbackUrl ? `https://livepeercdn.studio/hls/${stream.playbackUrl}/index.m3u8` : null}
+                videoUrl={stream.playbackUrl ? `https://stream.mux.com/${stream.playbackUrl}.m3u8` : null}
                 duration={0}
                 createdAt={new Date(stream.createdAt)}
-                isLive={true}
                 viewerCount={0} // Mock viewer count as it's not in DB yet
                 channel={{
                   name: stream.userName,

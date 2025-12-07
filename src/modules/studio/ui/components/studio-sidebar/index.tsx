@@ -9,7 +9,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { LogOutIcon, VideoIcon, RadioIcon, DollarSignIcon, SettingsIcon, BarChart3Icon } from "lucide-react";
+import { LogOutIcon, VideoIcon, RadioIcon, DollarSignIcon, SettingsIcon, BarChart3Icon, SparklesIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { StudioSidebarHeader } from "./studio-sidebar-header";
@@ -91,6 +91,19 @@ export const StudioSidebar = () => {
                 <Link href={"/studio/analytics"} prefetch className="text-white">
                   <BarChart3Icon className="size-5 text-white" />
                   <span className="text-sm text-white">Analytics</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                isActive={mounted && pathname?.startsWith("/studio/community")}
+                tooltip={"Community"}
+                className="transition-colors hover:bg-white/10 hover:backdrop-blur"
+                asChild
+              >
+                <Link href={"/studio/community"} prefetch className="text-white">
+                  <SparklesIcon className="size-5 text-white" />
+                  <span className="text-sm text-white">Community</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

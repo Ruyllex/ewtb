@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { users, transactions, balances, payouts, videos, monetizationRequests, liveStreams, notifications } from "@/db/schema";
+import { users, transactions, balances, payouts, videos, monetizationRequests, liveStreams, notifications, subscriptions, channels } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { eq, desc, and, gte, lte, sql, or } from "drizzle-orm";
@@ -8,12 +8,19 @@ import { getPayPalAccessToken, getPayPalBaseUrl } from "@/lib/paypal";
 
 // Requisitos para monetización
 const MIN_AGE_YEARS = 18;
-const MIN_VIDEOS = 5; // Mínimo de videos publicados
+const MIN_VIDEOS = 3; // Reduced from 5 to 3 as per new requirements
+const MIN_SUBSCRIBERS = 500; // New requirement
 const MIN_WITHDRAWAL_AMOUNT = 20; // Monto mínimo de retiro en USD
 const PLATFORM_COMMISSION = 0.03; // Comisión del 3%
 
 // Sistema de Stars
 const STARS_PER_USD = 100; // 100 Stars = $1 USD
+
+// Helper to get channel ID for a user
+async function getChannelId(userId: string): Promise<string | null> {
+    const [channel] = await db.select({ id: channels.id }).from(channels).where(eq(channels.userId, userId)).limit(1);
+    return channel?.id || null;
+}
 
 /**
  * Verificar si un usuario es admin
@@ -34,7 +41,7 @@ async function isUserAdmin(userId: string, clerkUserId: string | null): Promise<
 /**
  * Verifica si un usuario puede monetizar
  */
-async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons: string[] }> {
+async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons: string[]; metrics?: { subscribers: number; videos: number } }> {
   const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
 
   if (!user) {
@@ -60,20 +67,48 @@ async function canUserMonetize(userId: string): Promise<{ can: boolean; reasons:
     reasons.push("Cuenta de PayPal no activa");
   }
 
-  // Verificar contenido mínimo
-  const videoCount = await db
+  // Verificar contenido mínimo (Videos en los últimos 90 días)
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+  const videoCountResult = await db
     .select({ count: sql<number>`count(*)` })
     .from(videos)
-    .where(and(eq(videos.userId, userId), eq(videos.visibility, "public")));
+    .where(
+        and(
+            eq(videos.userId, userId), 
+            eq(videos.visibility, "public"),
+            gte(videos.createdAt, ninetyDaysAgo)
+        )
+    );
 
-  const count = Number(videoCount[0]?.count || 0);
-  if (count < MIN_VIDEOS) {
-    reasons.push(`Necesitas al menos ${MIN_VIDEOS} videos públicos`);
+  const videoCount = Number(videoCountResult[0]?.count || 0);
+  if (videoCount < MIN_VIDEOS) {
+    reasons.push(`Necesitas al menos ${MIN_VIDEOS} videos públicos en los últimos 90 días`);
+  }
+
+  // Verificar suscriptores
+  let subscriberCount = 0;
+  const channelId = await getChannelId(userId);
+  if (channelId) {
+      const subCountResult = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(subscriptions)
+        .where(eq(subscriptions.channelId, channelId));
+      subscriberCount = Number(subCountResult[0]?.count || 0);
+  }
+
+  if (subscriberCount < MIN_SUBSCRIBERS) {
+      reasons.push(`Necesitas al menos ${MIN_SUBSCRIBERS} suscriptores`);
   }
 
   return {
     can: reasons.length === 0,
     reasons,
+    metrics: {
+        subscribers: subscriberCount,
+        videos: videoCount
+    }
   };
 }
 
@@ -195,6 +230,12 @@ export const monetizationRouter = createTRPCRouter({
       canMonetize: user.canMonetize,
       monetizationCheck,
       monetizationRequest: request || null,
+      requirements: {
+          subscribers: monetizationCheck.metrics?.subscribers || 0,
+          videos: monetizationCheck.metrics?.videos || 0,
+          minSubscribers: MIN_SUBSCRIBERS,
+          minVideos: MIN_VIDEOS,
+      }
     };
   }),
 

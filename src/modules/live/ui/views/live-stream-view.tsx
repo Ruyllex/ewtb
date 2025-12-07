@@ -64,8 +64,8 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
   });
 
   const handleCopyStreamKey = async () => {
-    if (stream.livepeerStreamKey) {
-      await navigator.clipboard.writeText(stream.livepeerStreamKey);
+    if (stream.muxStreamKey) {
+      await navigator.clipboard.writeText(stream.muxStreamKey);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
       toast.success("Stream key copiado al portapapeles");
@@ -73,8 +73,8 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
   };
 
   const handleCopyPlaybackId = async () => {
-    if (stream.livepeerPlaybackId) {
-      await navigator.clipboard.writeText(stream.livepeerPlaybackId);
+    if (stream.muxPlaybackId) {
+      await navigator.clipboard.writeText(stream.muxPlaybackId);
       toast.success("Playback ID copiado al portapapeles");
     }
   };
@@ -95,9 +95,9 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
         <div className="lg:col-span-3 flex flex-col gap-4 h-full overflow-y-auto">
           {/* Reproductor de video */}
           <div className="aspect-video bg-black rounded-lg overflow-hidden shrink-0">
-            {stream.livepeerPlaybackId ? (
+            {stream.muxPlaybackId ? (
               <VideoPlayer
-                playbackId={stream.livepeerPlaybackId}
+                playbackId={stream.muxPlaybackId}
                 streamType="live"
                 autoPlay={false}
               />
@@ -167,13 +167,13 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">Servidor RTMP (Ingest Endpoint)</Label>
                   <div className="flex gap-2">
-                    <Input value={stream.livepeerIngestUrl || "rtmp://rtmp.livepeer.com/live"} readOnly className="font-mono text-sm bg-muted/50" />
+                    <Input value={stream.muxIngestUrl || "rtmps://global-live.mux.com:443/app"} readOnly className="font-mono text-sm bg-muted/50" />
                     <Button
                       type="button"
                       variant="outline"
                       size="icon"
                       onClick={() => {
-                        const url = stream.livepeerIngestUrl || "rtmp://rtmp.livepeer.com/live";
+                        const url = stream.muxIngestUrl || "rtmps://global-live.mux.com:443/app";
                         navigator.clipboard.writeText(url);
                         toast.success("Servidor copiado");
                       }}
@@ -187,7 +187,7 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
                   <Label className="text-muted-foreground">Stream Key</Label>
                   <div className="flex gap-2">
                     <Input
-                      value={stream.livepeerStreamKey || ""}
+                      value={stream.muxStreamKey || ""}
                       readOnly
                       className="font-mono text-sm bg-muted/50"
                       type={showStreamKey ? "text" : "password"}
@@ -213,11 +213,11 @@ const LiveStreamViewSuspense = ({ streamId }: LiveStreamViewProps) => {
                   </div>
                 </div>
 
-                {stream.livepeerPlaybackId && (
+                {stream.muxPlaybackId && (
                   <div className="space-y-2">
                     <Label className="text-muted-foreground">Playback ID</Label>
                     <div className="flex gap-2">
-                      <Input value={stream.livepeerPlaybackId} readOnly className="font-mono text-sm bg-muted/50" />
+                      <Input value={stream.muxPlaybackId} readOnly className="font-mono text-sm bg-muted/50" />
                       <Button
                         type="button"
                         variant="outline"

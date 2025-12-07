@@ -131,6 +131,7 @@ export const VideoView = ({ videoId }: VideoViewProps) => {
                   // Record view when user plays the video
                   recordView.mutate({ videoId });
                 }}
+                adsEnabled={video.userCanMonetize}
               />
             </div>
 

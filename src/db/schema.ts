@@ -126,6 +126,12 @@ export const videos = pgTable("videos", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   likes: integer("likes").default(0).notNull(),
+
+  // Mux fields
+  muxStatus: text("mux_status"),
+  muxAssetId: text("mux_asset_id"),
+  muxUploadId: text("mux_upload_id"),
+  muxPlaybackId: text("mux_playback_id"),
 });
 
 export const videoLikes = pgTable(
@@ -223,11 +229,11 @@ export const liveStreams = pgTable("live_streams", {
   ivsPlaybackUrl: text("ivs_playback_url"), // URL de reproducción del stream (Deprecado)
   ivsIngestEndpoint: text("ivs_ingest_endpoint"), // Endpoint RTMP para ingest (Deprecado)
 
-  // Campos de Livepeer
-  livepeerId: text("livepeer_id").unique(), // ID del stream en Livepeer
-  livepeerStreamKey: text("livepeer_stream_key"), // Stream key de Livepeer
-  livepeerPlaybackId: text("livepeer_playback_id"), // Playback ID de Livepeer
-  livepeerIngestUrl: text("livepeer_ingest_url"), // URL de ingest RTMP de Livepeer
+  // Campos de Mux
+  muxStreamId: text("mux_live_stream_id").unique(), // Changed to match existing DB column
+  muxStreamKey: text("mux_stream_key"),
+  muxPlaybackId: text("mux_playback_id"),
+  muxIngestUrl: text("mux_ingest_url"),
 
   status: text("status").default("idle").notNull(), // idle, active, disconnected
   userId: uuid("user_id")
@@ -388,6 +394,7 @@ export const channels = pgTable("channels", {
   avatarKey: text("avatar_key"), // Key de UploadThing para el avatar
   banner: text("banner"), // URL del banner del canal
   bannerKey: text("banner_key"), // Key de UploadThing para el banner
+  videoBlogUrl: text("video_blog_url"),
   isVerified: boolean("is_verified").default(false).notNull(), // Canal verificado por admin
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -595,6 +602,11 @@ export const channelMembershipOffers = pgTable(
     benefits: text("benefits").array(), // Lista de beneficios
     imageUrl: text("image_url"), // Badge/Imagen personalizada
     imageKey: text("image_key"),
+    videoUrl: text("video_url"),
+    videoKey: text("video_key"),
+    price: decimal("price", { precision: 10, scale: 2 }),
+    title: text("title"), // Custom title for the tier (e.g. "Gold Squad")
+    description: text("description"), // Custom description/message
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -644,3 +656,20 @@ export const membershipRelations = relations(memberships, ({ one }) => ({
     relationName: "membershipChannel",
   }),
 }));
+
+// --- ADVERTISING SYSTEM ---
+
+export const ads = pgTable("ads", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title: text("title").notNull(),
+    videoUrl: text("video_url").notNull(),
+    active: boolean("active").default(true).notNull(),
+    skipAfter: integer("skip_after").default(5).notNull(), // Seconds before skip (default 5)
+    // Metadata
+    clicks: integer("clicks").default(0).notNull(),
+    impressions: integer("impressions").default(0).notNull(),
+    
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+

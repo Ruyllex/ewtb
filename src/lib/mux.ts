@@ -1,15 +1,14 @@
-/**
- * Mux Client - DESHABILITADO
- * 
- * Este archivo ha sido deshabilitado debido a la migración de Mux a Amazon IVS y S3.
- * 
- * Los videos ahora se almacenan en S3 y las transmisiones en vivo se manejan con Amazon IVS.
- * 
- * Si necesitas procesar videos en el futuro, considera usar AWS MediaConvert
- * para transcodificación, generación de thumbnails, etc.
- */
+import Mux from "@mux/mux-node";
 
-// Este archivo se mantiene para referencia histórica pero ya no se usa.
-// Puede ser eliminado en el futuro si se confirma que no hay dependencias.
+if (!process.env.MUX_TOKEN_ID || !process.env.MUX_TOKEN_SECRET) {
+  console.error("❌ MUX_TOKEN_ID or MUX_TOKEN_SECRET is not set");
+} else {
+  console.log("✅ Mux client initialized with provided credentials");
+  // Log partial credentials for debugging (never log full secrets)
+  console.log(`   Token ID: ${process.env.MUX_TOKEN_ID.substring(0, 4)}...`);
+}
 
-export const mux = null;
+export const mux = new Mux({
+  tokenId: process.env.MUX_TOKEN_ID || "",
+  tokenSecret: process.env.MUX_TOKEN_SECRET || "",
+});

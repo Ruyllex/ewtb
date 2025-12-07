@@ -56,12 +56,12 @@ export const ChannelLiveStreams = ({ username }: ChannelLiveStreamsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
       {streams.map((stream) => (
-        <Link key={stream.id} href={`/studio/live/${stream.id}`}>
+        <Link key={stream.id} href={`/live/${stream.id}`}>
           <Card className="group hover:shadow-lg transition-shadow">
             <div className="relative aspect-video w-full bg-black rounded-t-lg overflow-hidden">
-              {stream.ivsPlaybackUrl ? (
+              {stream.playbackUrl ? (
                 <VideoPlayer
-                  playbackId={stream.ivsPlaybackUrl}
+                  playbackId={stream.playbackUrl}
                   streamType="live"
                 />
               ) : (

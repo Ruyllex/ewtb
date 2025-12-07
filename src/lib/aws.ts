@@ -26,11 +26,11 @@ if (!bucketName) {
 const ivsSupportedRegions = ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1", "ap-northeast-1"];
 const ivsRegion = ivsSupportedRegions.includes(region) ? region : "us-east-1";
 
-if (region !== ivsRegion) {
-  console.warn(
-    `⚠️ AWS_REGION "${region}" no es compatible con IVS. Usando "${ivsRegion}" para IVS.`
-  );
-}
+// if (region !== ivsRegion) {
+//   console.warn(
+//     `⚠️ AWS_REGION "${region}" no es compatible con IVS. Usando "${ivsRegion}" para IVS.`
+//   );
+// }
 
 export const ivsClient = new IvsClient({
   region: ivsRegion,

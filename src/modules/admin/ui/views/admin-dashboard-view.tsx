@@ -4,6 +4,8 @@
 import { api } from "@/trpc/client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 // Componentes de UI consolidados
@@ -11,18 +13,35 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { InfiniteScroll } from "@/components/infinite-scroll";
-
-// Utilidades e Iconos
-import { toast } from "sonner";
-import Image from "next/image";
-import Link from "next/link";
-import { Check, XCircle, ShieldCheckIcon, AlertTriangle, DollarSignIcon, WalletIcon, Loader2Icon, X, CheckCircle, Bell } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { 
+  Check, 
+  XCircle, 
+  ShieldCheckIcon, 
+  AlertTriangle, 
+  DollarSignIcon, 
+  WalletIcon, 
+  Loader2Icon, 
+  X, 
+  CheckCircle, 
+  Bell, 
+  Plus, 
+  Trash2 
+} from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ResponsiveModal } from "@/components/responsive-dialog";
 import { TimeAgo } from "@/components/time-ago";
+import { InfiniteScroll } from "@/components/infinite-scroll";
 
 
 export const AdminDashboardView = () => {
@@ -75,6 +94,17 @@ export const AdminDashboardView = () => {
     onError: (error) => {
       toast.error(error.message || "Error al desverificar el canal");
     },
+  });
+
+  // Mutación para alternar monetización
+  const toggleMonetization = api.channels.toggleMonetization.useMutation({
+    onSuccess: (data) => {
+        queryClient.invalidateQueries({ queryKey: [["channels"], "getAll"] });
+        toast.success(data.canMonetize ? "Monetización activada" : "Monetización desactivada");
+    },
+    onError: (error) => {
+        toast.error(error.message || "Error al cambiar estado de monetización");
+    }
   });
 
   // Obtener solicitudes de monetización
@@ -213,6 +243,7 @@ export const AdminDashboardView = () => {
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="ads">Anuncios</TabsTrigger>
         </TabsList>
         </div>
 
@@ -272,29 +303,35 @@ export const AdminDashboardView = () => {
                             {channel.description}
                           </p>
                         )}
-                        <div className="flex items-center gap-2 mb-4">
-                          <Badge variant={channel.isVerified ? "default" : "secondary"}>
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <Badge variant={channel.isVerified ? "default" : "secondary"} className={channel.isVerified ? "bg-[#5ADBFD] text-black hover:bg-[#5ADBFD]/90" : ""}>
                             {channel.isVerified ? "Verificado" : "No verificado"}
+                          </Badge>
+                          <Badge variant={channel.userCanMonetize ? "default" : "secondary"} className={channel.userCanMonetize ? "bg-green-500 hover:bg-green-600" : ""}>
+                             {channel.userCanMonetize ? "Monetización Activa" : "Sin Monetización"}
                           </Badge>
                         </div>
                         <div className="flex gap-2">
                           <Button
-                            variant="outline"
+                            variant="default"
                             size="sm"
                             asChild
-                            className="flex-1 border-[#5ADBFD] text-[#5ADBFD] hover:bg-[#5ADBFD] hover:text-black transition-colors"
+                            className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
                           >
                             <Link href={`/channel/${channel.userUsername || ""}`}>
                               Ver Canal
                             </Link>
                           </Button>
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          {/* Botón de Verificar/Desverificar */}
                           {channel.isVerified ? (
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => unverifyChannel.mutate({ channelId: channel.id })}
                               disabled={unverifyChannel.isPending}
-                              className="border-red-500/70 text-red-400 hover:bg-red-500/20 hover:border-red-500 hover:text-red-300 transition-colors disabled:opacity-50"
+                              className="flex-1 border-red-500/70 text-red-400 hover:bg-red-500/20 hover:border-red-500 hover:text-red-300 transition-colors disabled:opacity-50"
                             >
                               <XCircle className="h-4 w-4 mr-2" />
                               Desverificar
@@ -305,17 +342,30 @@ export const AdminDashboardView = () => {
                               size="sm"
                               onClick={() => verifyChannel.mutate({ channelId: channel.id })}
                               disabled={verifyChannel.isPending}
-                              className="bg-[#5ADBFD] text-black hover:bg-[#4AD0F0] transition-colors disabled:opacity-50 font-medium"
+                              className="flex-1 bg-[#5ADBFD] text-black hover:bg-[#4AD0F0] transition-colors disabled:opacity-50 font-medium"
                             >
-                              {/* Contenido agrupado en un span para prevenir errores de múltiples hijos */}
-                              <span className="flex items-center gap-2">
-                                <div className="h-5 w-5 rounded-full bg-black/10 flex items-center justify-center shrink-0">
+                                <div className="h-5 w-5 rounded-full bg-black/10 flex items-center justify-center shrink-0 mr-2">
                                   <Check className="h-3.5 w-3.5 text-black stroke-[3]" />
                                 </div>
                                 Verificar
-                              </span>
                             </Button>
                           )}
+                          
+                          {/* Botón de Toggle Monetización */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleMonetization.mutate({ channelId: channel.id })}
+                            disabled={toggleMonetization.isPending}
+                            className={`flex-1 transition-colors disabled:opacity-50 ${
+                                channel.userCanMonetize 
+                                ? "border-green-500/70 text-green-400 hover:bg-green-500/20 hover:border-green-500 hover:text-green-300"
+                                : "border-yellow-500/70 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500 hover:text-yellow-300"
+                            }`}
+                          >
+                            <DollarSignIcon className="h-4 w-4 mr-2" />
+                            {channel.userCanMonetize ? "Desactivar $" : "Activar $"}
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -560,6 +610,20 @@ export const AdminDashboardView = () => {
             )}
           </div>
         </TabsContent>
+        <TabsContent value="ads" className="mt-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gestión de Anuncios</CardTitle>
+                <CardDescription>Sube y gestiona los anuncios que se mostrarán en la plataforma.</CardDescription>
+              </div>
+              <CreateAdModal />
+            </CardHeader>
+            <CardContent>
+              <AdsList />
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* Modal de Activación Manual */}
@@ -646,3 +710,119 @@ export const AdminDashboardView = () => {
     </div>
   );
 };
+
+// Subcomponents for Ads Management
+
+function CreateAdModal() {
+    const [open, setOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [videoUrl, setVideoUrl] = useState("");
+    const utils = api.useUtils();
+    
+    // Using standard mutation
+    const createAd = api.ads.create.useMutation({
+        onSuccess: async () => {
+            toast.success("Anuncio creado");
+            setOpen(false);
+            setTitle("");
+            setVideoUrl("");
+            await utils.ads.getMany.invalidate();
+            // Force refetch to ensure UI updates
+            await utils.ads.getMany.refetch();
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        createAd.mutate({ title, videoUrl });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Anuncio
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Crear Nuevo Anuncio</DialogTitle>
+                    <DialogDescription>Ingresa los detalles del anuncio.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Título</Label>
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Promo de Verano" required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>URL del Video</Label>
+                        <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." required />
+                        <p className="text-xs text-muted-foreground">Pega la URL directa del video (mp4, m3u8, etc)</p>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" disabled={createAd.isPending}>
+                            {createAd.isPending ? "Creando..." : "Crear"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function AdsList() {
+    const { data: ads, isLoading } = api.ads.getMany.useQuery();
+    const utils = api.useUtils();
+    
+    const deleteAd = api.ads.delete.useMutation({
+        onSuccess: async () => {
+            toast.success("Anuncio eliminado");
+            await utils.ads.getMany.invalidate();
+            await utils.ads.getMany.refetch();
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        }
+    });
+
+    if (isLoading) return <Skeleton className="h-20 w-full" />;
+    
+    if (!ads || ads.length === 0) {
+        return <div className="text-center py-10 text-muted-foreground">No hay anuncios creados.</div>;
+    }
+
+    return (
+        <div className="space-y-4">
+            {ads.map((ad) => (
+                <div key={ad.id} className="flex items-center justify-between border p-4 rounded-lg">
+                    <div>
+                        <h4 className="font-semibold">{ad.title}</h4>
+                        <p className="text-sm text-muted-foreground truncate max-w-[300px]">{ad.videoUrl}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant={ad.active ? "default" : "secondary"}>
+                            {ad.active ? "Activo" : "Inactivo"}
+                        </Badge>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                                if(confirm("¿Estás seguro de eliminar este anuncio?")) {
+                                    deleteAd.mutate({ id: ad.id });
+                                }
+                            }}
+                            disabled={deleteAd.isPending}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}

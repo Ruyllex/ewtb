@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { liveStreams, subscriptions, channels, users } from "@/db/schema";
-import { livepeer } from "@/lib/livepeer";
+import { mux } from "@/lib/mux";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
 import { and, eq, desc, sql, inArray } from "drizzle-orm";
@@ -18,14 +18,17 @@ export const liveRouter = createTRPCRouter({
       const { id: userId } = ctx.user;
 
       try {
-        const stream = await livepeer.stream.create({
-          name: input.title,
+        const stream = await mux.video.liveStreams.create({
+          playback_policy: ["public"],
+          new_asset_settings: {
+            playback_policy: ["public"],
+          },
         });
 
-        if (!stream.stream?.id || !stream.stream?.streamKey || !stream.stream?.playbackId) {
+        if (!stream.id || !stream.stream_key || !stream.playback_ids?.[0]?.id) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: "Failed to create Livepeer stream",
+            message: "Failed to create Mux stream",
           });
         }
 
@@ -35,10 +38,10 @@ export const liveRouter = createTRPCRouter({
             userId,
             title: input.title,
             description: input.description || null,
-            livepeerId: stream.stream.id,
-            livepeerStreamKey: stream.stream.streamKey,
-            livepeerPlaybackId: stream.stream.playbackId,
-            livepeerIngestUrl: "rtmp://rtmp.livepeer.com/live", // Default Livepeer ingest URL
+            muxStreamId: stream.id,
+            muxStreamKey: stream.stream_key,
+            muxPlaybackId: stream.playback_ids[0].id,
+            muxIngestUrl: "rtmps://global-live.mux.com:443/app",
             status: "idle",
           })
           .returning();
@@ -148,13 +151,13 @@ export const liveRouter = createTRPCRouter({
         throw new TRPCError({ code: "NOT_FOUND", message: "Live stream not found" });
       }
 
-      // Eliminar stream de Livepeer si existe
-      if (stream.livepeerId) {
+      // Eliminar stream de Mux si existe
+      if (stream.muxStreamId) {
         try {
-          await livepeer.stream.delete(stream.livepeerId);
+          await mux.video.liveStreams.delete(stream.muxStreamId);
         } catch (error) {
-          console.error("Failed to delete Livepeer stream", error);
-          // Continuar con la eliminación en BD aunque falle en Livepeer
+          console.error("Failed to delete Mux stream", error);
+          // Continuar con la eliminación en BD aunque falle en Mux
         }
       } else if (stream.ivsChannelArn) {
          // Fallback para streams antiguos de IVS
@@ -184,7 +187,7 @@ export const liveRouter = createTRPCRouter({
         .where(and(eq(liveStreams.id, input.id), eq(liveStreams.userId, userId)))
         .limit(1);
 
-      if (!stream.livepeerId) {
+      if (!stream.muxStreamId) {
           // Fallback para streams antiguos de IVS
           if (stream.ivsChannelArn) {
              try {
@@ -220,14 +223,9 @@ export const liveRouter = createTRPCRouter({
       }
 
       try {
-        const result = await livepeer.stream.get(stream.livepeerId);
-        const livepeerStream = result.stream;
-
-        if (!livepeerStream) {
-             throw new TRPCError({ code: "NOT_FOUND", message: "Stream not found in Livepeer" });
-        }
-
-        const isActive = livepeerStream.isActive;
+        const streamInfo = await mux.video.liveStreams.retrieve(stream.muxStreamId);
+        
+        const isActive = streamInfo.status === "active";
         const status = isActive ? "active" : "idle";
 
         // Actualizar estado en BD
@@ -241,9 +239,9 @@ export const liveRouter = createTRPCRouter({
 
         return {
           status,
-          streamKey: stream.livepeerStreamKey,
-          playbackUrl: stream.livepeerPlaybackId, // Note: This is just the ID, not the full URL usually, but we'll handle it in frontend or here
-          ingestUrl: "rtmp://rtmp.livepeer.com/live",
+          streamKey: stream.muxStreamKey,
+          playbackUrl: stream.muxPlaybackId,
+          ingestUrl: "rtmps://global-live.mux.com:443/app",
         };
       } catch (error) {
         console.error("Failed to get live stream status", error);
@@ -265,7 +263,7 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackUrl: liveStreams.livepeerPlaybackId,
+          playbackUrl: liveStreams.muxPlaybackId,
           ivsPlaybackUrl: liveStreams.ivsPlaybackUrl,
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
@@ -316,7 +314,7 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackUrl: liveStreams.livepeerPlaybackId, // Prefer Livepeer
+          playbackUrl: liveStreams.muxPlaybackId, // Prefer Mux
           ivsPlaybackUrl: liveStreams.ivsPlaybackUrl, // Fallback
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
@@ -401,7 +399,7 @@ export const liveRouter = createTRPCRouter({
           id: liveStreams.id,
           title: liveStreams.title,
           description: liveStreams.description,
-          playbackUrl: liveStreams.livepeerPlaybackId, // Prefer Livepeer
+          playbackUrl: liveStreams.muxPlaybackId, // Prefer Mux
           ivsPlaybackUrl: liveStreams.ivsPlaybackUrl, // Fallback
           status: liveStreams.status,
           createdAt: liveStreams.createdAt,
