@@ -1,8 +1,8 @@
 import { db } from "@/db";
-import { channels, subscriptions, users, videos, liveStreams } from "@/db/schema";
+import { channels, subscriptions, users, videos, liveStreams, comments, videoLikes, userActions } from "@/db/schema";
 import { createTRPCRouter, protectedProcedure, baseProcedure } from "@/trpc/init";
 import { TRPCError } from "@trpc/server";
-import { and, eq, sql, desc, count } from "drizzle-orm";
+import { and, eq, sql, desc, count, inArray } from "drizzle-orm";
 import z from "zod";
 
 /**
@@ -676,7 +676,118 @@ getVideos: baseProcedure
     }),
 
   /**
-   * Obtiene todos los canales (solo admin) - Para dashboard administrativo
+   * Eliminar un canal (solo admin)
+   */
+  deleteChannel: protectedProcedure
+    .input(z.object({ channelId: z.string().uuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Verificar si el usuario es admin
+      const isAdmin = await isUserAdmin(userId, ctx.clerkUserId || null);
+      
+      if (!isAdmin) {
+        throw new Error("No tienes permisos para eliminar canales");
+      }
+
+      // Verificar si el canal existe
+      const [channel] = await db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, input.channelId))
+        .limit(1);
+
+      if (!channel) {
+        throw new Error("El canal no existe");
+      }
+
+      try {
+        // Eliminar en orden para evitar errores de foreign key constraints
+        // 1. Eliminar comentarios de los videos del canal
+        await db
+          .delete(comments)
+          .where(inArray(comments.videoId, (
+            db.select({ id: videos.id })
+              .from(videos)
+              .where(eq(videos.userId, channel.userId))
+          )));
+
+        // 2. Eliminar likes de los videos del canal
+        await db
+          .delete(videoLikes)
+          .where(inArray(videoLikes.videoId, (
+            db.select({ id: videos.id })
+              .from(videos)
+              .where(eq(videos.userId, channel.userId))
+          )));
+
+        // 3. Eliminar videos del canal
+        await db
+          .delete(videos)
+          .where(eq(videos.userId, channel.userId));
+
+        // 4. Eliminar el canal
+        await db
+          .delete(channels)
+          .where(eq(channels.id, input.channelId));
+
+        return { success: true, message: "Canal eliminado exitosamente" };
+      } catch (error) {
+        console.error("Error al eliminar canal:", error);
+        throw new Error("Error al eliminar el canal. Por favor intenta nuevamente.");
+      }
+    }),
+
+  /**
+   * Agregar un strike a un canal (solo admin)
+   */
+  addChannelStrike: protectedProcedure
+    .input(z.object({ 
+      channelId: z.string().uuid(),
+      reason: z.string().min(1).max(500)
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { id: userId } = ctx.user;
+
+      // Verificar si el usuario es admin
+      const isAdmin = await isUserAdmin(userId, ctx.clerkUserId || null);
+      
+      if (!isAdmin) {
+        throw new Error("No tienes permisos para agregar strikes a canales");
+      }
+
+      // Verificar si el canal existe
+      const [channel] = await db
+        .select()
+        .from(channels)
+        .where(eq(channels.id, input.channelId))
+        .limit(1);
+
+      if (!channel) {
+        throw new Error("El canal no existe");
+      }
+
+      try {
+        // Crear el strike en la tabla userActions
+        await db.insert(userActions).values({
+          userId: channel.userId, // El strike se asocia al dueño del canal
+          actionType: "warning", // Usamos el mismo tipo que para usuarios
+          reason: input.reason,
+          createdBy: userId, // El admin que está creando el strike
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        return { success: true, message: "Strike agregado exitosamente al canal" };
+      } catch (error) {
+        console.error("Error al agregar strike al canal:", error);
+        throw new Error("Error al agregar strike al canal. Por favor intenta nuevamente.");
+      }
+    }),
+
+  /**
+   * Obtener todos los canales con paginación (solo admin)
    */
   getAll: protectedProcedure
     .input(

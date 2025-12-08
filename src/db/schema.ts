@@ -539,6 +539,7 @@ export const notificationType = pgEnum("notification_type", [
   "new_follower",
   "video_liked",
   "comment_reply",
+  "warning_received",
 ]);
 
 export const notifications = pgTable("notifications", {

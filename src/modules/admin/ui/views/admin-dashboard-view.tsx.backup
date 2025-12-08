@@ -77,7 +77,8 @@ export const AdminDashboardView = () => {
 
   const verifyChannel = api.channels.verifyChannel.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.channels.getAll.queryKey });
+      // Invalidación específica para mejor rendimiento
+      queryClient.invalidateQueries({ queryKey: [["channels"], "getAll"] });
       toast.success("Canal verificado exitosamente");
     },
     onError: (error) => {
@@ -87,7 +88,8 @@ export const AdminDashboardView = () => {
 
   const unverifyChannel = api.channels.unverifyChannel.useMutation({
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.channels.getAll.queryKey });
+      // Invalidación específica para mejor rendimiento
+      queryClient.invalidateQueries({ queryKey: [["channels"], "getAll"] });
       toast.success("Canal desverificado exitosamente");
     },
     onError: (error) => {
@@ -98,33 +100,11 @@ export const AdminDashboardView = () => {
   // Mutación para alternar monetización
   const toggleMonetization = api.channels.toggleMonetization.useMutation({
     onSuccess: (data) => {
-        queryClient.invalidateQueries({ queryKey: api.channels.getAll.queryKey });
+        queryClient.invalidateQueries({ queryKey: [["channels"], "getAll"] });
         toast.success(data.canMonetize ? "Monetización activada" : "Monetización desactivada");
     },
     onError: (error) => {
         toast.error(error.message || "Error al cambiar estado de monetización");
-    }
-  });
-
-  // Mutación para eliminar canal
-  const deleteChannel = api.channels.deleteChannel.useMutation({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.channels.getAll.queryKey });
-      toast.success("Canal eliminado exitosamente");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Error al eliminar el canal");
-    }
-  });
-
-  // Mutación para agregar strike a canal
-  const addChannelStrike = api.channels.addChannelStrike.useMutation({
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: api.channels.getAll.queryKey });
-      toast.success("Strike agregado exitosamente al canal");
-    },
-    onError: (error) => {
-      toast.error(error.message || "Error al agregar strike al canal");
     }
   });
 
@@ -270,6 +250,7 @@ export const AdminDashboardView = () => {
         </div>
 
         <TabsContent value="channels" className="mt-6">
+
           <div className="mb-8">
             <h2 className="text-2xl font-semibold mb-4 text-white">Gestión de Canales</h2>
             <p className="text-white/70 mb-6">
@@ -323,132 +304,6 @@ export const AdminDashboardView = () => {
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
                             {channel.description}
                           </p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-2 mb-4">
-                          <Badge variant={channel.isVerified ? "default" : "secondary"} className={channel.isVerified ? "bg-[#5ADBFD] text-black hover:bg-[#5ADBFD]/90" : ""}>
-                            {channel.isVerified ? "Verificado" : "No verificado"}
-                          </Badge>
-                          <Badge variant={channel.userCanMonetize ? "default" : "secondary"} className={channel.userCanMonetize ? "bg-green-500 hover:bg-green-600" : ""}>
-                             {channel.userCanMonetize ? "Monetización Activa" : "Sin Monetización"}
-                          </Badge>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="default"
-                            size="sm"
-                            asChild
-                            className="flex-1 bg-white/10 hover:bg-white/20 text-white border-0"
-                          >
-                            <Link href={`/channel/${channel.userUsername || ""}`}>
-                              Ver Canal
-                            </Link>
-                          </Button>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          {channel.isVerified ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => unverifyChannel.mutate({ channelId: channel.id })}
-                              disabled={unverifyChannel.isPending}
-                              className="flex-1 border-red-500/70 text-red-400 hover:bg-red-500/20 hover:border-red-500 hover:text-red-300 transition-colors disabled:opacity-50"
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Desverificar
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => verifyChannel.mutate({ channelId: channel.id })}
-                              disabled={verifyChannel.isPending}
-                              className="flex-1 bg-[#5ADBFD] text-black hover:bg-[#4AD0F0] transition-colors disabled:opacity-50 font-medium"
-                            >
-                                <div className="h-5 w-5 rounded-full bg-black/10 flex items-center justify-center shrink-0 mr-2">
-                                  <Check className="h-3.5 w-3.5 text-black stroke-[3]" />
-                                </div>
-                                Verificar
-                            </Button>
-                          )}
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleMonetization.mutate({ channelId: channel.id })}
-                            disabled={toggleMonetization.isPending}
-                            className={`flex-1 transition-colors disabled:opacity-50 ${
-                                channel.userCanMonetize 
-                                ? "border-green-500/70 text-green-400 hover:bg-green-500/20 hover:border-green-500 hover:text-green-300"
-                                : "border-yellow-500/70 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500 hover:text-yellow-300"
-                            }`}
-                          >
-                            <DollarSignIcon className="h-4 w-4 mr-2" />
-                            {channel.userCanMonetize ? "Desactivar $" : "Activar $"}
-                          </Button>
-                        </div>
-                        <div className="flex gap-2 mt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const reason = prompt(`Razón del strike para el canal "${channel.name}":`);
-                              if (reason && reason.trim()) {
-                                addChannelStrike.mutate({ 
-                                  channelId: channel.id, 
-                                  reason: reason.trim() 
-                                });
-                              }
-                            }}
-                            disabled={addChannelStrike.isPending}
-                            className="flex-1 border-yellow-500/70 text-yellow-400 hover:bg-yellow-500/20 hover:border-yellow-500 hover:text-yellow-300 transition-colors"
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-2" />
-                            {addChannelStrike.isPending ? "Agregando..." : "Strike"}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              if (confirm(`¿Estás seguro de eliminar el canal "${channel.name}"? Esta acción es irreversible y eliminará todos los videos y datos del canal.`)) {
-                                deleteChannel.mutate({ channelId: channel.id });
-                              }
-                            }}
-                            disabled={deleteChannel.isPending}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            {deleteChannel.isPending ? "Eliminando..." : "Eliminar"}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                <InfiniteScroll
-                  isManual
-                  hasNextPage={hasNextPage}
-                  isFetchingNextPage={isFetchingNextPage}
-                  fetchNextPage={fetchNextPage}
-                />
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-6">
-          <UsersList />
-        </TabsContent>
-
-        <TabsContent value="monetization" className="mt-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-white">Solicitudes de Monetización</h2>
-            <p className="text-white/70 mb-6">
-              Revisa y aprueba o rechaza las solicitudes de monetización de los usuarios.
-            </p>
-            {isLoadingMonetizationRequests ? (
-              <div className="grid grid-cols-1 gap-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32" />
                 ))}
               </div>
             ) : monetizationRequests && monetizationRequests.length > 0 ? (
@@ -666,76 +521,219 @@ export const AdminDashboardView = () => {
             )}
           </div>
         </TabsContent>
-
         <TabsContent value="ads" className="mt-6">
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4 text-white">Gestión de Anuncios</h2>
-            <p className="text-white/70 mb-6">
-              Gestiona los anuncios y campañas publicitarias de la plataforma.
-            </p>
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">Funcionalidad de anuncios en desarrollo</p>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gestión de Anuncios</CardTitle>
+                <CardDescription>Sube y gestiona los anuncios que se mostrarán en la plataforma.</CardDescription>
+              </div>
+              <CreateAdModal />
+            </CardHeader>
+            <CardContent>
+              <AdsList />
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
-      {/* Modal para activación manual de monetización */}
-      <Dialog open={showManualActivationModal} onOpenChange={setShowManualActivationModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Activar Monetización Manualmente</DialogTitle>
-            <DialogDescription>
-              Ingresa el ID del usuario o email para activar la monetización manualmente.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="userId">ID del Usuario</Label>
-              <Input
-                id="userId"
-                value={manualActivationUserId}
-                onChange={(e) => setManualActivationUserId(e.target.value)}
-                placeholder="UUID del usuario"
-              />
-            </div>
-            <div>
-              <Label htmlFor="email">Email PayPal</Label>
-              <Input
-                id="email"
-                value={manualActivationEmail}
-                onChange={(e) => setManualActivationEmail(e.target.value)}
-                placeholder="email@paypal.com"
-              />
-            </div>
+      {/* Modal de Activación Manual */}
+      <ResponsiveModal
+        title="Activar Monetización Manualmente"
+        open={showManualActivationModal}
+        onOpenChange={setShowManualActivationModal}
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="manual-user-id">ID del Usuario</Label>
+            <Input
+              id="manual-user-id"
+              type="text"
+              placeholder="UUID del usuario"
+              value={manualActivationUserId}
+              onChange={(e) => setManualActivationUserId(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Ingresa el ID (UUID) del usuario al que quieres activar la monetización.
+            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowManualActivationModal(false)}>
+
+          <div className="space-y-2">
+            <Label htmlFor="manual-email">Email de PayPal</Label>
+            <Input
+              id="manual-email"
+              type="email"
+              placeholder="email@paypal.com"
+              value={manualActivationEmail}
+              onChange={(e) => setManualActivationEmail(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              El email debe estar asociado a una cuenta de PayPal válida.
+            </p>
+          </div>
+
+          <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              ⚠️ Esta acción activará la monetización sin necesidad de que el usuario la solicite primero.
+            </p>
+          </div>
+
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowManualActivationModal(false);
+                setManualActivationUserId("");
+                setManualActivationEmail("");
+              }}
+            >
               Cancelar
             </Button>
             <Button
               onClick={() => {
-                if (!manualActivationUserId || !manualActivationEmail) {
-                  toast.error("Por favor completa todos los campos");
+                if (!manualActivationUserId || !manualActivationUserId.trim()) {
+                  toast.error("Por favor, ingresa el ID del usuario");
+                  return;
+                }
+                if (!manualActivationEmail || !manualActivationEmail.includes("@")) {
+                  toast.error("Por favor, ingresa un email de PayPal válido");
                   return;
                 }
                 activateMonetizationManually.mutate({
-                  userId: manualActivationUserId,
-                  paypalEmail: manualActivationEmail,
+                  userId: manualActivationUserId.trim(),
+                  paypalEmail: manualActivationEmail.trim(),
                 });
               }}
-              disabled={activateMonetizationManually.isPending}
+              disabled={activateMonetizationManually.isPending || !manualActivationUserId || !manualActivationEmail}
             >
               {activateMonetizationManually.isPending ? (
-                <Loader2Icon className="h-4 w-4 mr-2 animate-spin" />
-              ) : null}
-              Activar
+                <>
+                  <Loader2Icon className="size-4 mr-2 animate-spin" />
+                  Activando...
+                </>
+              ) : (
+                "Activar Monetización"
+              )}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 };
+
+// Subcomponents for Ads Management
+
+function CreateAdModal() {
+    const [open, setOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [videoUrl, setVideoUrl] = useState("");
+    const utils = api.useUtils();
+    
+    // Using standard mutation
+    const createAd = api.ads.create.useMutation({
+        onSuccess: async () => {
+            toast.success("Anuncio creado");
+            setOpen(false);
+            setTitle("");
+            setVideoUrl("");
+            await utils.ads.getMany.invalidate();
+            // Force refetch to ensure UI updates
+            await utils.ads.getMany.refetch();
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        }
+    });
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        createAd.mutate({ title, videoUrl });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuevo Anuncio
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Crear Nuevo Anuncio</DialogTitle>
+                    <DialogDescription>Ingresa los detalles del anuncio.</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <Label>Título</Label>
+                        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Promo de Verano" required />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>URL del Video</Label>
+                        <Input value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://..." required />
+                        <p className="text-xs text-muted-foreground">Pega la URL directa del video (mp4, m3u8, etc)</p>
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" disabled={createAd.isPending}>
+                            {createAd.isPending ? "Creando..." : "Crear"}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function AdsList() {
+    const { data: ads, isLoading } = api.ads.getMany.useQuery();
+    const utils = api.useUtils();
+    
+    const deleteAd = api.ads.delete.useMutation({
+        onSuccess: async () => {
+            toast.success("Anuncio eliminado");
+            await utils.ads.getMany.invalidate();
+            await utils.ads.getMany.refetch();
+        },
+        onError: (err) => {
+            toast.error(err.message);
+        }
+    });
+
+    if (isLoading) return <Skeleton className="h-20 w-full" />;
+    
+    if (!ads || ads.length === 0) {
+        return <div className="text-center py-10 text-muted-foreground">No hay anuncios creados.</div>;
+    }
+
+    return (
+        <div className="space-y-4">
+            {ads.map((ad) => (
+                <div key={ad.id} className="flex items-center justify-between border p-4 rounded-lg">
+                    <div>
+                        <h4 className="font-semibold">{ad.title}</h4>
+                        <p className="text-sm text-muted-foreground truncate max-w-[300px]">{ad.videoUrl}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Badge variant={ad.active ? "default" : "secondary"}>
+                            {ad.active ? "Activo" : "Inactivo"}
+                        </Badge>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                                if(confirm("¿Estás seguro de eliminar este anuncio?")) {
+                                    deleteAd.mutate({ id: ad.id });
+                                }
+                            }}
+                            disabled={deleteAd.isPending}
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
